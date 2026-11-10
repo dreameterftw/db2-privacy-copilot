@@ -26,7 +26,7 @@ class Settings(BaseSettings):
     
     # API settings
     api_secret_key: str = "change-this-in-production"
-    api_host: str = "0.0.0.0"
+    api_host: str = "127.0.0.1"
     api_port: int = 8000
     
     # LLM configuration (optional)

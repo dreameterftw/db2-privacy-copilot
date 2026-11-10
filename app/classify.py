@@ -14,6 +14,7 @@ from typing import Any, Optional
 from app.config import settings
 from app.db import conn, query
 from app.discovery import columns
+from app.sql import quote_identifier
 
 
 # Regex patterns for value-based detection
@@ -101,13 +102,19 @@ def sample_values(schema: str, table: str, column: str, limit: int = 200) -> lis
     Returns:
         List of sampled values (may be empty if table is empty)
     """
-    # Use parameterized query with catalog-validated identifiers
+    quoted_schema = quote_identifier(schema)
+    quoted_table = quote_identifier(table)
+    quoted_column = quote_identifier(column)
+    if not isinstance(limit, int) or not 1 <= limit <= 1000:
+        raise ValueError("limit must be an integer between 1 and 1000")
+
+    # Identifiers are validated and limit is a bounded integer.
     sql = f"""
-        SELECT "{column}"
-        FROM "{schema}"."{table}"
-        WHERE "{column}" IS NOT NULL
+        SELECT {quoted_column}
+        FROM {quoted_schema}.{quoted_table}
+        WHERE {quoted_column} IS NOT NULL
         FETCH FIRST {limit} ROWS ONLY
-    """
+    """  # nosec B608
     
     try:
         result = query(sql)

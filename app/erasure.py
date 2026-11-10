@@ -22,6 +22,7 @@ from typing import Optional
 from app import audit, discovery, guardrail
 from app.config import settings
 from app.db import conn, query
+from app.sql import quote_identifier
 
 
 @dataclass
@@ -103,13 +104,12 @@ def count_rows(schema: str, table: str, fk_column: str, subject_id: int) -> int:
     Returns:
         Row count
     """
-    sql = f'SELECT COUNT(*) FROM "{schema}"."{table}" WHERE "{fk_column}" = ?'
-    
-    try:
-        result = query(sql, (subject_id,))
-        return result[0][0] if result else 0
-    except Exception:
-        return 0  # If error, return 0 (e.g., table doesn't exist)
+    quoted_table = f"{quote_identifier(schema)}.{quote_identifier(table)}"
+    quoted_fk = quote_identifier(fk_column)
+    # Identifiers are validated; subject_id is parameterized.
+    sql = f"SELECT COUNT(*) FROM {quoted_table} WHERE {quoted_fk} = ?"  # nosec B608
+    result = query(sql, (subject_id,))
+    return result[0][0] if result else 0
 
 
 def get_pii_columns(table: str) -> list[str]:
@@ -179,7 +179,9 @@ def plan(
     """
     if schema is None:
         schema = settings.db2_schema
-    
+
+    quoted_schema = quote_identifier(schema)
+
     # Get deletion order (children first)
     try:
         order = discovery.delete_order(schema, root)
@@ -211,9 +213,12 @@ def plan(
         
         # Generate SQL based on action
         sql = None
-        
+        quoted_table = quote_identifier(table)
+        quoted_fk = quote_identifier(fk_column)
+
         if action == "ERASE":
-            sql = f'DELETE FROM "{schema}"."{table}" WHERE "{fk_column}" = ?'
+            # Identifiers are catalog-derived and validated; values are parameterized.
+            sql = f"DELETE FROM {quoted_schema}.{quoted_table} WHERE {quoted_fk} = ?"  # nosec B608
         
         elif action == "ANONYMISE":
             # Get PII columns that are nullable
@@ -221,8 +226,9 @@ def plan(
             nullable_pii = [c for c in pii_cols if is_nullable(schema, table, c)]
             
             if nullable_pii:
-                sets = ", ".join(f'"{c}" = NULL' for c in nullable_pii)
-                sql = f'UPDATE "{schema}"."{table}" SET {sets} WHERE "{fk_column}" = ?'
+                sets = ", ".join(f"{quote_identifier(c)} = NULL" for c in nullable_pii)
+                # Identifiers are catalog-derived and validated; values are parameterized.
+                sql = f"UPDATE {quoted_schema}.{quoted_table} SET {sets} WHERE {quoted_fk} = ?"  # nosec B608
             else:
                 # No nullable PII columns - treat as RETAIN
                 sql = None
