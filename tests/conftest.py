@@ -24,6 +24,61 @@ def db_conn():
 
 
 @pytest.fixture
+def classified_erasure_columns(db_conn):
+    """Provide deterministic PII metadata for erasure integration tests."""
+    cur = db_conn.cursor()
+    merge_sql = """
+        MERGE INTO PII_MAP AS target
+        USING (VALUES (?, ?, ?, ?, ?)) AS source
+            (TABNAME, COLNAME, LABEL, CONFIDENCE, METHOD)
+        ON target.TABNAME = source.TABNAME AND target.COLNAME = source.COLNAME
+        WHEN MATCHED THEN
+            UPDATE SET LABEL = source.LABEL,
+                       CONFIDENCE = source.CONFIDENCE,
+                       METHOD = source.METHOD
+        WHEN NOT MATCHED THEN
+            INSERT (TABNAME, COLNAME, LABEL, CONFIDENCE, METHOD)
+            VALUES (source.TABNAME, source.COLNAME, source.LABEL,
+                    source.CONFIDENCE, source.METHOD)
+    """
+    classifications = (
+        ("PATIENT", "FULL_NM", "NAME"),
+        ("PATIENT", "CUST_MAIL_ID", "EMAIL"),
+        ("PATIENT", "PH_NO", "PHONE"),
+        ("PATIENT", "GOVT_ID", "GOVT_ID"),
+        ("APPOINTMENT", "DOCTOR_NM", "NAME"),
+        ("APPOINTMENT", "REASON", "HEALTH"),
+    )
+    previous = {}
+    for table, column, label in classifications:
+        cur.execute(
+            "SELECT LABEL, CONFIDENCE, METHOD FROM PII_MAP "
+            "WHERE TABNAME = ? AND COLNAME = ?",
+            (table, column),
+        )
+        previous[(table, column)] = cur.fetchone()
+        cur.execute(merge_sql, (table, column, label, 1.0, "TEST"))
+    db_conn.commit()
+
+    yield
+
+    for table, column, _ in classifications:
+        old_values = previous[(table, column)]
+        if old_values:
+            label, confidence, method = old_values
+            cur.execute(
+                merge_sql,
+                (table, column, label, float(confidence), method),
+            )
+        else:
+            cur.execute(
+                "DELETE FROM PII_MAP WHERE TABNAME = ? AND COLNAME = ?",
+                (table, column),
+            )
+    db_conn.commit()
+
+
+@pytest.fixture
 def sample_patient_id(db_conn):
     """Create a test patient and return the ID."""
     cur = db_conn.cursor()

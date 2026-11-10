@@ -23,7 +23,7 @@ pytestmark = pytest.mark.integration
 
 
 @pytest.fixture
-def test_patient_with_data(db_conn):
+def test_patient_with_data(db_conn, classified_erasure_columns):
     """Create a test patient with related data."""
     cur = db_conn.cursor()
     

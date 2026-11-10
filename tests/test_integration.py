@@ -15,7 +15,7 @@ pytestmark = pytest.mark.integration
 
 
 @pytest.fixture
-def integration_patient(db_conn):
+def integration_patient(db_conn, classified_erasure_columns):
     """Create a patient with full related data for integration testing."""
     cur = db_conn.cursor()
     
@@ -284,12 +284,13 @@ class TestErrorHandling:
         # Generate plan
         steps = erasure.plan(patient_id)
         
-        # Inject a bad SQL statement in one step
-        # (This simulates an error during execution)
+        # Use a valid guarded UPDATE shape that fails only at Db2 execution.
         for step in steps:
             if step.sql and 'APPOINTMENT' in step.sql:
-                # Make SQL invalid
-                step.sql = 'INVALID SQL STATEMENT'
+                step.sql = (
+                    'UPDATE "DB2INST1"."APPOINTMENT" '
+                    'SET "NO_SUCH_COLUMN" = NULL WHERE "PATIENT_ID" = ?'
+                )
                 break
         
         plan_hash_value = erasure.plan_hash(steps)
@@ -309,10 +310,12 @@ class TestErrorHandling:
                 plan_hash_value
             )
         
-        # Verify nothing was deleted (rollback worked)
+        # Verify no patient identifiers were changed before the failing statement.
         cur.execute("SELECT COUNT(*) FROM PATIENT WHERE ID = ?", (patient_id,))
         patient_count_after = cur.fetchone()[0]
         assert patient_count_after == patient_count_before  # Still there!
+        cur.execute("SELECT FULL_NM FROM PATIENT WHERE ID = ?", (patient_id,))
+        assert cur.fetchone()[0] == "Integration Test"
 
 
 class TestEndToEndDemo:
