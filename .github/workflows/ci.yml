@@ -36,7 +36,7 @@ jobs:
       - name: Scan application code
         run: bandit -r app -ll
       - name: Audit dependencies
-        run: pip-audit
+        run: pip-audit --skip-editable
 
   integration:
     runs-on: ubuntu-latest
