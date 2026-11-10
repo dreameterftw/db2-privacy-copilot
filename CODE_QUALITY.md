@@ -400,15 +400,8 @@ class ConsentGrantRequest(BaseModel):
 | Accountability | ✅ | Audit trail |
 | Breach Notification | ❌ | Not implemented |
 
-### GDPR (EU) - Partial Compliance
-
-| Requirement | Status | Notes |
-|-------------|--------|-------|
-| Right to Erasure | ✅ | Implemented |
-| Right to Access | ⚠️ | Planned |
-| Consent | ✅ | Granular, withdrawable |
-| Data Portability | ❌ | Not implemented |
-| Breach Notification | ❌ | Not implemented |
+The prototype does not claim GDPR compliance; it supports selected DPDP use
+cases and is not legal advice.
 
 ---
 

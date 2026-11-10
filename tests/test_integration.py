@@ -35,12 +35,14 @@ def integration_patient(db_conn):
         INSERT INTO APPOINTMENT (PATIENT_ID, APPT_DT, APPT_TIME, DOCTOR_NM, REASON, STATUS)
         VALUES (?, '2026-12-01', '14:00:00', 'Dr. Integration', 'Test', 'SCHEDULED')
     """, (patient_id,))
+    cur.execute("SELECT IDENTITY_VAL_LOCAL() FROM SYSIBM.SYSDUMMY1")
+    appointment_id = cur.fetchone()[0]
     
     # Insert billing (should be RETAINED)
     cur.execute("""
-        INSERT INTO BILLING (PATIENT_ID, BILL_DT, AMOUNT, INVOICE_NO, FISCAL_YEAR)
-        VALUES (?, '2026-12-01', 1000.00, 'INT-TEST-001', '2026-27')
-    """, (patient_id,))
+        INSERT INTO BILLING (PATIENT_ID, APPT_ID, BILL_DT, AMOUNT, INVOICE_NO, FISCAL_YEAR)
+        VALUES (?, ?, '2026-12-01', 1000.00, 'INT-TEST-001', '2026-27')
+    """, (patient_id, appointment_id))
     
     db_conn.commit()
     
@@ -110,6 +112,37 @@ class TestErasureWorkflow:
     def test_plan_to_execution(self, integration_patient, db_conn):
         """Test full erasure workflow."""
         patient_id = integration_patient
+
+        # Ensure nullable personal/health columns have classifications for anonymisation.
+        agents.classify_schema(settings.db2_schema)
+        cur = db_conn.cursor()
+        for table, column, label in (
+            ("PATIENT", "FULL_NM", "NAME"),
+            ("PATIENT", "CUST_MAIL_ID", "EMAIL"),
+            ("APPOINTMENT", "DOCTOR_NM", "NAME"),
+            ("APPOINTMENT", "REASON", "HEALTH"),
+        ):
+            cur.execute(
+                "SELECT COUNT(*) FROM PII_MAP WHERE TABNAME = ? AND COLNAME = ?",
+                (table, column),
+            )
+            if cur.fetchone()[0]:
+                cur.execute(
+                    """
+                    UPDATE PII_MAP SET LABEL = ?, CONFIDENCE = 1.0, METHOD = 'MANUAL'
+                    WHERE TABNAME = ? AND COLNAME = ?
+                    """,
+                    (label, table, column),
+                )
+            else:
+                cur.execute(
+                    """
+                    INSERT INTO PII_MAP (TABNAME, COLNAME, LABEL, CONFIDENCE, METHOD)
+                    VALUES (?, ?, ?, 1.0, 'MANUAL')
+                    """,
+                    (table, column, label),
+                )
+        db_conn.commit()
         
         # Step 1: Plan
         plan_result = agents.plan_erasure(patient_id)
@@ -123,6 +156,9 @@ class TestErasureWorkflow:
         )
         assert billing_step is not None
         assert billing_step['action'] == 'RETAIN'
+        for table in ("PATIENT", "APPOINTMENT"):
+            step = next(s for s in plan_result["steps"] if s["table"] == table)
+            assert step["action"] == "ANONYMISE"
         
         # Step 2: Get full plan for execution
         steps = erasure.plan(patient_id)
@@ -155,20 +191,35 @@ class TestErasureWorkflow:
         )
         
         # Step 5: Verify results
-        # Patient should be deleted
+        # Patient must remain because retained billing records reference it.
         cur.execute("SELECT COUNT(*) FROM PATIENT WHERE ID = ?", (patient_id,))
         patient_count_after = cur.fetchone()[0]
-        assert patient_count_after == 0
+        assert patient_count_after == 1
+        cur.execute("SELECT FULL_NM, CUST_MAIL_ID FROM PATIENT WHERE ID = ?", (patient_id,))
+        assert cur.fetchone() == (None, None)
         
-        # Appointment should be deleted
+        # Appointment must remain because BILLING.APPT_ID references it.
         cur.execute("SELECT COUNT(*) FROM APPOINTMENT WHERE PATIENT_ID = ?", (patient_id,))
         appt_count_after = cur.fetchone()[0]
-        assert appt_count_after == 0
+        assert appt_count_after == appt_count_before
+        cur.execute(
+            "SELECT DOCTOR_NM, REASON FROM APPOINTMENT WHERE PATIENT_ID = ?",
+            (patient_id,),
+        )
+        assert all(row == (None, None) for row in cur.fetchall())
         
         # Billing should be RETAINED
         cur.execute("SELECT COUNT(*) FROM BILLING WHERE PATIENT_ID = ?", (patient_id,))
         billing_count_after = cur.fetchone()[0]
         assert billing_count_after == billing_count_before  # Still there!
+        cur.execute("""
+            SELECT COUNT(*)
+            FROM BILLING b
+            JOIN APPOINTMENT a ON b.APPT_ID = a.ID
+            JOIN PATIENT p ON b.PATIENT_ID = p.ID
+            WHERE b.PATIENT_ID = ?
+        """, (patient_id,))
+        assert cur.fetchone()[0] == billing_count_before
         
         # Step 6: Verify audit trail
         audit_records = audit.get_records_by_subject(patient_id)

@@ -129,7 +129,12 @@ def seed_database():
             govt_id = generate_invalid_aadhaar()  # Decoy!
         
         addr1 = fake.street_address()
-        addr2 = fake.secondary_address() if random.random() > 0.5 else None
+        addr2 = (
+            f"Flat {random.randint(1, 999)}, "
+            f"{random.choice(['Wing A', 'Wing B', 'Tower 1', 'Tower 2'])}"
+            if random.random() > 0.5
+            else None
+        )
         city = fake.city()
         pincode = fake.postcode()
         

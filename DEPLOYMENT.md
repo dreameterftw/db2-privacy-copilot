@@ -578,8 +578,6 @@ from contextlib import contextmanager
 
 - `README.md` - Project overview
 - `QUICKSTART.md` - Quick setup
-- `IMPLEMENTATION_STATUS.md` - Development progress
-- `PROGRESS.md` - Quick reference
 - This file - Deployment details
 
 ### Getting Help

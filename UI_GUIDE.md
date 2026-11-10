@@ -31,7 +31,7 @@ Features:
 - Key features showcase (6 cards)
 - How it works (4-step process)
 - Technology stack
-- Compliance badges (DPDP Act, GDPR)
+- DPDP decision-support scope (not legal advice)
 - CTA button to launch dashboard
 
 **Actions**:

@@ -135,7 +135,7 @@ st.markdown("""
 st.markdown("""
 <div class="hero">
     <h1>🔒 Db2 Privacy Copilot</h1>
-    <p>AI-Powered DPDP & GDPR Compliance for IBM Db2</p>
+    <p>DPDP Decision Support for IBM Db2</p>
     <p style="font-size: 1.1em; margin-top: 20px;">
         Automatically discover, classify, and manage personal data with human-in-the-loop safety
     </p>
@@ -350,13 +350,11 @@ with col1:
 
 with col2:
     st.info("""
-    **GDPR (EU) - Partial**
-    
-    ✅ Right to Erasure (Art. 17)  
-    ✅ Consent (Art. 7)  
-    ✅ Data Protection by Design  
-    ⚠️ Right to Access (planned)  
-    ⚠️ Data Portability (planned)
+    **Scope and limitations**
+
+    This prototype supports selected DPDP use cases. It is not a complete GDPR
+    implementation or legal advice. Retention rules remain unverified until
+    reviewed by qualified owners.
     """)
 
 # Footer

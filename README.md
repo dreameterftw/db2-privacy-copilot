@@ -1,7 +1,8 @@
 # 🔒 Db2 Privacy Copilot
 
-> An agentic DPDP/GDPR compliance system for IBM Db2 — discover, classify, and act on personal data with AI-powered planning and deterministic safety guardrails.
+> A DPDP decision-support system for IBM Db2 — discover and classify personal data, manage consent, and plan rights requests with deterministic safety guardrails.
 
+[![CI](https://github.com/dreameterftw/db2-privacy-copilot/actions/workflows/ci.yml/badge.svg)](https://github.com/dreameterftw/db2-privacy-copilot/actions/workflows/ci.yml)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/)
 [![IBM Db2](https://img.shields.io/badge/IBM-Db2-blue.svg)](https://www.ibm.com/db2)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-green.svg)](https://fastapi.tiangolo.com/)
@@ -60,9 +61,16 @@ Schema discovery and classification query the live Db2 catalog and sample
 columns, while consent, erasure plans, audit records, and the PII taxonomy
 vectors persist to Db2. Live name-based classification uses LangChain's
 `langchain-db2` `DB2VS` vector store with local sentence-transformer embeddings.
-This requires Db2 12.1.2 or newer. Mock mode uses keyword heuristics instead.
+This requires Db2 12.1.2 or newer. Mock mode uses keyword heuristics instead
+and is intended for development/tests only; it is not a Db2 integration.
 CrewAI is wired to read-only/planning tools in `app/agents.py`; the agents do
 not execute destructive SQL.
+
+**Scope and limitations:** This project is decision-support software for DPDP
+use cases, not a complete GDPR implementation or legal advice. Seeded retention
+rules are marked unverified (`VERIFIED='N'`) and must be reviewed by qualified
+owners before production use. Mock mode uses in-memory sample data and does not
+connect to or modify Db2.
 
 ---
 

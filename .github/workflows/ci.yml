@@ -70,7 +70,7 @@ jobs:
             icr.io/db2_community/db2
           ready=false
           for _ in $(seq 1 60); do
-            if docker exec db2 su - db2inst1 -c "db2 connect to clinic"; then
+            if docker exec db2 su - db2inst1 -c "db2 connect to clinic" >/dev/null 2>&1; then
               ready=true
               break
             fi

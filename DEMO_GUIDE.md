@@ -22,14 +22,14 @@ This guide walks you through a complete demonstration of the Db2 Privacy Copilot
 
 **Landing Page**: http://localhost:8501
 
-*"Welcome to the Db2 Privacy Copilot — an AI-powered system for DPDP and GDPR compliance on IBM Db2."*
+*"Welcome to the Db2 Privacy Copilot — decision-support tooling for DPDP use cases on IBM Db2."*
 
 **Highlight**:
 - Hero section with tagline
 - 6 key features (Discovery, Classification, Consent, Erasure, Guardrail, Audit)
-- Stats: 150+ tests, 60+ security checks, 85%+ PII detection
+- Show the latest CI test and classification evaluation results; do not quote unverified figures.
 - Technology stack
-- Compliance badges
+- DPDP decision-support scope and legal disclaimer
 
 **Action**: Click "Launch Dashboard"
 
@@ -216,8 +216,7 @@ This guide walks you through a complete demonstration of the Db2 Privacy Copilot
    - Single transaction with rollback
 
 3. **Compliance-First**:
-   - DPDP Act 2023 (India) ready
-   - Partial GDPR compliance
+   - DPDP use-case decision support (not legal advice)
    - Bitemporal consent tracking
    - Retention rules enforced
 

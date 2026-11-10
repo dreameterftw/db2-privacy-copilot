@@ -7,6 +7,10 @@ managed database before handling real data.
 
 ## Required GitHub configuration
 
+Set the repository variable `DEPLOY_ENABLED` to `true` only after the VM,
+secrets, and production environment below are ready. The deployment workflow is
+disabled by default.
+
 Create these repository secrets:
 
 | Secret | Value |
