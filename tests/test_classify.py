@@ -3,6 +3,7 @@ Tests for PII classification.
 """
 import pytest
 
+from app import classify as classify_module
 from app.classify import (
     Classification,
     classify_by_name,
@@ -137,6 +138,17 @@ class TestNameClassification:
         result = classify_by_name("STATUS")
         # Should return None or low confidence
         assert result is None or result[1] > 0.5
+
+    def test_live_name_match_is_marked_as_vector(self, monkeypatch):
+        monkeypatch.setattr(classify_module, "MOCK_MODE", False)
+        monkeypatch.setattr(classify_module, "sample_values", lambda *args, **kwargs: [])
+        monkeypatch.setattr(classify_module, "scan_values", lambda samples: {})
+        monkeypatch.setattr(classify_module, "classify_by_name", lambda column: ("EMAIL", 0.1))
+
+        result = classify_module.classify_column("DB2INST1", "PATIENT", "MAIL", "VARCHAR")
+
+        assert result.label == "EMAIL"
+        assert result.method == "NAME_VECTOR"
 
 
 class TestColumnClassification:

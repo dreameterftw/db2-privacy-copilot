@@ -26,6 +26,10 @@ Keep Db2 credentials in `/opt/copilot/.env` on the VM, not in GitHub.
 Use Ubuntu 22.04/24.04 with at least 8 GB RAM (16 GB recommended), Docker Engine,
 and the Compose plugin. Allow inbound SSH, HTTP, and HTTPS only in both the host
 firewall and cloud security group; Db2 port 50000 is not published.
+Use Db2 12.1.2 or newer for the LangChain DB2VS taxonomy-vector search. The API
+downloads its sentence-transformer model on first vector classification unless
+the model is already present in the Hugging Face cache, so allow outbound access
+to the model host during first use.
 
 Create the deploy account and `/opt/copilot/deploy`, install the CI public key
 in the account's `authorized_keys`, and authenticate that account to GHCR with a

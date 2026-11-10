@@ -57,9 +57,12 @@ Db2 Privacy Copilot automates the most tedious parts of data privacy compliance:
 
 The Db2 connection is implemented with `ibm_db`/`ibm_db_dbi` in `app/db.py`.
 Schema discovery and classification query the live Db2 catalog and sample
-columns, while consent, erasure plans, and the audit chain persist to Db2 tables.
-CrewAI is a required project dependency and is wired to read-only/planning tools
-in `app/agents.py`; the agents do not execute destructive SQL.
+columns, while consent, erasure plans, audit records, and the PII taxonomy
+vectors persist to Db2. Live name-based classification uses LangChain's
+`langchain-db2` `DB2VS` vector store with local sentence-transformer embeddings.
+This requires Db2 12.1.2 or newer. Mock mode uses keyword heuristics instead.
+CrewAI is wired to read-only/planning tools in `app/agents.py`; the agents do
+not execute destructive SQL.
 
 ---
 
@@ -146,7 +149,7 @@ db2-privacy-copilot/
 |---|---|---|
 | 0 | Environment, Docker, synthetic data | ✅ Complete |
 | 1 | Schema discovery (FK graph, delete order) | ✅ Complete |
-| 2 | PII classification (regex + name heuristics) | ✅ Complete |
+| 2 | PII classification (value rules + Db2VS semantic name search) | ✅ Complete |
 | 3 | Bitemporal consent ledger | ✅ Complete |
 | 4 | Rights requests, guardrail, audit chain | ✅ Complete |
 | 5 | CrewAI agents, FastAPI, Streamlit UI | ✅ Complete |
@@ -177,6 +180,18 @@ Agent generates plan → DPO reviews → DPO approves (signs with ID)
 
 ### Audit chain
 Every record contains `hash(prev_hash + content)`. Changing any record invalidates all subsequent hashes — tamper-evident by design.
+
+### Dependency audit exceptions
+CrewAI currently requires ChromaDB, although application code does not directly
+use it and neither Compose stack starts or exposes a ChromaDB service. The
+dependency audit accepts only the four documented ChromaDB advisories in
+[the exception policy](security/audit-exceptions.toml). The exception is owned
+by `aryan` and expires on **2026-12-10**; the audit fails after that date or for
+any other finding. Container scans use the matching CVE IDs in
+[`.trivyignore`](.trivyignore) and fail on all other CRITICAL/HIGH findings.
+CODEOWNERS requests review from the repository owner for the policy, tests, and
+scanner workflows; enable required Code Owner approvals in branch protection to
+enforce that review.
 
 ---
 
@@ -285,7 +300,7 @@ MIT — see [LICENSE](LICENSE) for details.
 
 - [IBM Db2](https://www.ibm.com/db2) — database engine with temporal table support
 - [CrewAI](https://crewai.com) — multi-agent orchestration
-- [LangChain](https://python.langchain.com) — LLM tooling
+- [LangChain Db2](https://pypi.org/project/langchain-db2/) — Db2VS vector storage and semantic name search
 - [FastAPI](https://fastapi.tiangolo.com) — REST API framework
 - [Streamlit](https://streamlit.io) — rapid UI development
 - [NetworkX](https://networkx.org) — FK graph analysis

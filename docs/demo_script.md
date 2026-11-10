@@ -207,9 +207,11 @@
 ## Backup Plans
 
 ### If Db2 vector support unavailable
-- Fall back to rules-only classification
-- Show clear banner in UI
-- Emphasize other Db2 features still work
+- Live name-based classification reports an error instead of silently claiming
+  vector results; use Db2 12.1.2 or newer to enable DB2VS.
+- Mock mode uses keyword heuristics for database-free demos.
+- Emphasize that other Db2 features still work, but do not describe mock
+  heuristics as vector search.
 
 ### If LLM times out
 - Classification and erasure are deterministic

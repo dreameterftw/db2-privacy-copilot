@@ -144,8 +144,8 @@ Output: PII labels with confidence scores
 
 Flow:
 ┌─────────────┐    ┌──────────────────┐    ┌──────────────┐
-│ Column name │───▶│ Name matching    │───▶│ Label + conf │
-└─────────────┘    │ (heuristic/vector)│    └──────────────┘
+│ Column name │───▶│ LangChain DB2VS  │───▶│ Label + conf │
+└─────────────┘    │ cosine similarity│    └──────────────┘
                    └──────────────────┘
                    
 ┌─────────────┐    ┌──────────────────┐    ┌──────────────┐
@@ -155,9 +155,13 @@ Flow:
 
 Decision Logic:
 1. Hit rate >= 30% → Use value rule
-2. Name similarity → Use name classification
+2. Db2VS cosine distance within threshold → Use semantic name classification
 3. Else → NOT_PII or flag for review
 ```
+
+Live Db2 classification stores PII taxonomy embeddings in
+`PII_TAXONOMY_VECTORS` and requires Db2 12.1.2 or newer. Mock mode uses keyword
+heuristics and does not initialize the vector store.
 
 ### 3. Consent Ledger (Bitemporal)
 

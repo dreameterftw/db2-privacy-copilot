@@ -1,0 +1,6 @@
+/.github/CODEOWNERS @dreameterftw
+/.github/workflows/ci.yml @dreameterftw
+/.github/workflows/deploy.yml @dreameterftw
+/security/ @dreameterftw
+/tests/security/ @dreameterftw
+/.trivyignore @dreameterftw

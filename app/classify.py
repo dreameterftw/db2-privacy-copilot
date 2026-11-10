@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from typing import Any, Optional
 
 from app.config import settings
-from app.db import conn, query
+from app.db import MOCK_MODE, conn, query
 from app.discovery import columns
 from app.sql import quote_identifier
 
@@ -81,7 +81,7 @@ class Classification:
     column: str
     label: str  # EMAIL, PHONE, PAN, AADHAAR, DOB, ADDRESS, NAME, HEALTH, NOT_PII, etc.
     confidence: float  # 0.0 to 1.0
-    method: str  # VALUE_RULE, NAME_VECTOR, MANUAL
+    method: str  # VALUE_RULE, NAME_VECTOR, NAME_HEURISTIC, MANUAL
     sample_size: int = 0
     needs_review: bool = False
 
@@ -175,23 +175,13 @@ def scan_values(samples: list[Any]) -> dict[str, float]:
     return {k: count / n for k, count in hits.items() if count > 0}
 
 
-def classify_by_name(column_name: str) -> Optional[tuple[str, float]]:
+def _classify_by_name_heuristic(column_name: str) -> Optional[tuple[str, float]]:
     """
-    Classify a column by name using vector similarity.
-    
-    This will be enhanced in Phase 2b with actual vector search.
-    For now, use simple heuristics.
-    
-    Args:
-        column_name: Column name to classify
-        
-    Returns:
-        Tuple of (label, similarity_score) or None if no match
+    Classify a column name with keyword rules for database-free mock mode.
     """
     # Normalize column name for matching
     name_lower = column_name.lower().replace("_", " ")
-    
-    # Simple heuristic matching (will be replaced with vector similarity)
+
     patterns = {
         "email": ["email", "mail", "e-mail"],
         "phone": ["phone", "mobile", "tel", "contact", "ph"],
@@ -201,24 +191,37 @@ def classify_by_name(column_name: str) -> Optional[tuple[str, float]]:
         "govt_id": ["govt", "government", "id", "aadhaar", "pan"],
         "health": ["diagnosis", "medication", "test", "result", "prescription", "lab"],
     }
-    
+
     best_match = None
     best_score = 0.0
-    
+
     for label, keywords in patterns.items():
         for keyword in keywords:
             is_short_phone_alias = keyword == "ph" and keyword in name_lower.split()
             if (keyword in name_lower and keyword != "ph") or is_short_phone_alias:
-                # Simple scoring: longer matches score higher
                 score = 0.7 if is_short_phone_alias else len(keyword) / len(name_lower)
                 if score > best_score:
                     best_score = score
                     best_match = label.upper()
-    
-    if best_match and best_score >= 0.2:  # Minimum threshold
-        return (best_match, 1.0 - best_score)  # Convert to distance (lower is better)
-    
+
+    if best_match and best_score >= 0.2:
+        return (best_match, 1.0 - best_score)
+
     return None
+
+
+def classify_by_name(column_name: str) -> Optional[tuple[str, float]]:
+    """Classify a column name with Db2 vector similarity or mock-mode heuristics."""
+    if MOCK_MODE:
+        return _classify_by_name_heuristic(column_name)
+
+    from app.vector_store import classify_column_name
+
+    return classify_column_name(column_name)
+
+
+def _name_classification_method() -> str:
+    return "NAME_HEURISTIC" if MOCK_MODE else "NAME_VECTOR"
 
 
 def classify_column(
@@ -226,18 +229,18 @@ def classify_column(
 ) -> Classification:
     """
     Classify a single column as PII or not.
-    
+
     Decision order:
     1. Value rule with hit rate >= threshold → use that label
-    2. Name similarity under threshold → use that label
+    2. Db2 vector similarity (or mock-mode heuristic) under threshold → use that label
     3. Otherwise → NOT_PII
-    
+
     Args:
         schema: Schema name
         table: Table name
         column: Column name
         typename: Db2 type name
-        
+
     Returns:
         Classification result
     """
@@ -250,11 +253,11 @@ def classify_column(
             confidence=0.95,
             method="TYPE_HEURISTIC",
         )
-    
+
     # Layer A: Value-based rules
     samples = sample_values(schema, table, column, limit=200)
     value_hits = scan_values(samples)
-    
+
     # Check if any pattern has high enough hit rate
     value_threshold = settings.pii_value_threshold
     for pattern, hit_rate in value_hits.items():
@@ -267,23 +270,23 @@ def classify_column(
                 method="VALUE_RULE",
                 sample_size=len(samples),
             )
-    
+
     # Layer B: Name-based similarity
     name_result = classify_by_name(column)
     if name_result:
         label, distance = name_result
         similarity = 1.0 - distance
         name_threshold = settings.pii_name_threshold
-        
+
         if distance <= name_threshold:
             return Classification(
                 table=table,
                 column=column,
                 label=label,
                 confidence=similarity,
-                method="NAME_VECTOR",
+                method=_name_classification_method(),
             )
-    
+
     # Layer C: Uncertain - may need review
     # If we have value hits but below threshold, flag for review
     if value_hits:
@@ -297,7 +300,7 @@ def classify_column(
             sample_size=len(samples),
             needs_review=True,
         )
-    
+
     # Default: Not PII
     return Classification(
         table=table,

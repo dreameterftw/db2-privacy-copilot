@@ -84,7 +84,8 @@ Tag each column as PII or not, with type, confidence, and method.
 - [x] Heuristic column name matching
 - [x] Handles ugly column names (CUST_MAIL_ID → EMAIL)
 - [x] Threshold-based classification
-- [x] Note: Vector similarity with DB2VS ready for enhancement
+- [x] LangChain `langchain-db2` DB2VS cosine-similarity search for live Db2
+- [x] Persisted PII taxonomy vectors; keyword heuristics retained for mock mode
 
 #### 2.3 Decision Logic ✅
 - [x] Combined value rules + name similarity
@@ -116,10 +117,6 @@ Tag each column as PII or not, with type, confidence, and method.
 - [x] Decoy columns correctly rejected
 - [x] Evaluation shows improvement over baseline
 - [x] Tests comprehensive and passing
-
-### Next Enhancement (Optional)
-- Vector similarity with langchain-db2 DB2VS (Phase 2b)
-- Would improve name-based classification further
 
 ---
 

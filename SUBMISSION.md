@@ -16,7 +16,7 @@
 - **Executes rights requests** safely with human approval and guardrails
 - **Audits everything** with a hash-chained, tamper-evident log
 
-**Key Innovation:** The system operates **inside the database**, not as an external tool. Db2 is not just storage—it provides catalog discovery, temporal queries, ACID transactions, and vector capabilities that make compliance workflows possible.
+**Key Innovation:** The system operates **inside the database**, not as an external tool. Db2 is not just storage—it provides catalog discovery, temporal queries, ACID transactions, and the vector store used for semantic PII classification.
 
 ---
 
@@ -73,7 +73,7 @@ No agent can execute destructive SQL. Every action requires:
 | **SYSTEM_TIME** | "What did we know when" | Consent history |
 | **ACID transactions** | All-or-nothing erasure | `erasure.py` |
 | **Parameterized queries** | SQL injection prevention | All modules |
-| **VECTOR type** | (Ready) PII taxonomy similarity | Phase 7 |
+| **VECTOR type** | PII taxonomy similarity search | `app/vector_store.py` |
 | **RCAC** | (Ready) Policy enforcement | Phase 7 |
 
 **Not a passive datastore.** Db2 provides the foundation that makes compliance workflows safe and auditable.
@@ -97,7 +97,7 @@ python -m app.discovery
 ### 2. Classification (Phase 2)
 
 - **Value rules:** Regex + Verhoeff checksum for Aadhaar
-- **Name matching:** Semantic similarity (heuristic + vector-ready)
+- **Name matching:** LangChain `langchain-db2` `DB2VS` cosine similarity against the persisted PII taxonomy; mock mode uses keyword heuristics
 - **Evaluation:** Precision/recall vs regex-only baseline
 - **Handles edge cases:**
   - Phone as BIGINT
@@ -106,7 +106,7 @@ python -m app.discovery
   - Invalid Aadhaar rejected
   - Decoy columns (TICKET_REF_NO) not flagged
 
-**25+ tests** | **Metrics:** Precision 0.92, Recall 0.95, F1 0.93
+**25+ tests** | **Synthetic-label evaluation:** Precision 0.92, Recall 0.95, F1 0.93. Validate vector thresholds against a supported live Db2 instance before production use.
 
 **Demo:**
 ```bash
@@ -375,9 +375,10 @@ crew = Crew(
 ## Db2 Connector
 
 **langchain-db2** `DB2VS` (vector store):
-- Ready for Phase 7 (RAG over DPDP Act text)
-- Would store PII taxonomy embeddings
-- Vector similarity for column name classification
+- Stores PII taxonomy embeddings in the `PII_TAXONOMY_VECTORS` Db2 table
+- Performs cosine-similarity search for live column-name classification
+- Uses local `sentence-transformers/all-MiniLM-L6-v2` embeddings
+- Requires Db2 12.1.2 or newer; mock mode uses deterministic keyword heuristics
 
 **ibm_db / ibm_db_dbi**:
 - Direct SQL access
