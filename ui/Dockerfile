@@ -4,7 +4,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends gcc g++ libxml2 libaio1 \
+    && apt-get install -y --no-install-recommends gcc g++ libxml2 libaio1t64 \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /srv

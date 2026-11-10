@@ -1,251 +1,117 @@
-# Quick Start Guide
+# Quick Start
 
-Get the Db2 Privacy Copilot running in 30 minutes.
+This guide starts the demo with real IBM Db2, the FastAPI service, and the
+Streamlit UI. The first Docker build downloads large application dependencies
+and can take several minutes.
 
-## Prerequisites
+## Requirements
 
-- **Docker** (for Db2 Community Edition)
-- **Python 3.11+**
-- At least 4GB RAM available for the Db2 container
-- Internet connection (for initial Docker image pull)
+- Docker Desktop running with its Linux container engine and Compose v2
+- 8 GB RAM recommended for the local demo; leave several GB of disk space for
+  the Db2 image, application images, and build cache
+- Python 3.11+ only if you want to run the test suite on your host
 
-## Step 1: Clone and Setup (5 min)
+On Windows, Docker Desktop manages the Linux container environment. You do not
+need to install Ubuntu or set up a separate Linux machine.
 
-```bash
-# Clone the repository
-git clone <your-repo-url>
+## Start the stack
+
+In PowerShell:
+
+```powershell
+git clone https://github.com/dreameterftw/db2-privacy-copilot.git
 cd db2-privacy-copilot
-
-# Run setup script
-# On Linux/Mac:
-bash setup.sh
-
-# On Windows:
-setup.bat
+Copy-Item .env.example .env
+notepad .env
 ```
 
-## Step 2: Configure Environment (1 min)
+Set unique values for `DB2_PASSWORD` and `API_SECRET_KEY` in `.env`. Keep that
+file private; it is excluded from Git. Compose connects the application
+containers to Db2 using the service name `db2`.
 
-Edit `.env` and set a strong password:
+Build and start all three services:
 
-```bash
-# .env
-DB2_PASSWORD=replace-with-a-strong-password
-```
-
-## Step 3: Start Db2 (10 min)
-
-```bash
-# Start the container
-docker compose up -d
-
-# Watch the logs (this will take 5-10 minutes)
+```powershell
+docker compose --profile app up -d --build
+docker compose ps
 docker compose logs -f db2
-
-# Wait for this message:
-# "(*) Setup has completed."
 ```
 
-**Tip:** On first run, Db2 needs to initialize the database. This is normal and only happens once.
+Wait until Db2 finishes initialization and the `db2` service is healthy. Then
+create the application schema and synthetic demo records:
 
-## Step 4: Initialize Database (2 min)
-
-```bash
-# Activate virtual environment
-# On Linux/Mac:
-source .venv/bin/activate
-
-# On Windows:
-.venv\Scripts\activate.bat
-
-# Run bootstrap script
-python app/bootstrap.py
+```powershell
+docker compose exec api python -m app.bootstrap
+docker compose exec api python -m eval.seed
 ```
 
-Expected output:
-```
-============================================================
-Db2 Privacy Copilot - Database Bootstrap
-============================================================
+Open:
 
-1. Checking Db2 version...
-   ✓ Db2 version: SQL12012
+- Streamlit UI: <http://localhost:8501>
+- FastAPI docs: <http://localhost:8001/docs>
+- Db2 API health: <http://localhost:8001/healthz>
 
-2. Executing sql/00_schema_clinic.sql...
-   ✓ Completed
+The health endpoint returns the connected Db2 service level. The seed script
+adds 100 synthetic patients and related clinic records. Run it once on a fresh
+database; rerunning it adds more rows.
 
-3. Executing sql/01_app_tables.sql...
-   ✓ Completed
+## Run tests
 
-4. Executing sql/02_consent_temporal.sql...
-   ✓ Completed
-...
-```
+For host-side tests, install Python dependencies:
 
-## Step 5: Seed Test Data (2 min)
-
-```bash
-python eval/seed.py
+```powershell
+.\setup.bat
+.\.venv\Scripts\Activate.ps1
+pytest -q
 ```
 
-This creates:
-- 100 synthetic patients with realistic PII
-- Appointments, prescriptions, lab reports, etc.
-- Ground-truth labels for evaluation
-- Challenging edge cases (hidden PANs, decoy columns, etc.)
+The test suite contains both database-independent tests and Db2 integration
+tests. Run the local quality subset in mock mode with:
 
-## Step 6: Run Tests (2 min)
-
-```bash
-pytest -v
+```powershell
+$env:DB_MOCK = "1"
+pytest -m "not integration" -q
+Remove-Item Env:DB_MOCK
 ```
 
-All tests should pass. If any fail, check:
-1. Db2 is running: `docker compose ps`
-2. Connection settings in `.env` are correct
-3. Bootstrap completed successfully
+For real Db2 integration on Windows, use the Compose app container instead of
+the native Windows Db2 driver. The Db2 driver may fail with an IBMOSauthclient
+error on Windows even while the same credentials work from the Linux
+application container.
 
-## Step 7: Explore (5-10 min)
+## Stop the services
 
-### Option A: Use Python directly
+Stop the containers and preserve the database:
 
-```python
-# Discovery
-from app import discovery
-discovery.columns("DB2INST1")
-discovery.fk_edges("DB2INST1")
-discovery.delete_order("DB2INST1", "PATIENT")
-
-# Classification (Phase 2 - coming next)
-# from app import classify
-# classify.run("DB2INST1")
-
-# Consent (Phase 3 - coming next)
-# from app.consent import grant, withdraw, valid_on
-# grant(patient_id=1, purpose="MARKETING", start="2026-01-01")
+```powershell
+docker compose --profile app down
 ```
 
-### Option B: Use SQL directly
+Delete the Db2 data volume only when you intend to reset the demo database:
 
-```bash
-# Connect to Db2
-docker exec -it db2-privacy-copilot-db2-1 bash
-su - db2inst1
-db2 connect to clinic
-
-# Explore the schema
-db2 "SELECT TABNAME FROM SYSCAT.TABLES WHERE TABSCHEMA='DB2INST1'"
-
-# Look at sample data
-db2 "SELECT ID, FULL_NM, CUST_MAIL_ID FROM PATIENT FETCH FIRST 5 ROWS ONLY"
-
-# Check PII map (after classification)
-db2 "SELECT * FROM PII_MAP"
-
-# Check retention rules
-db2 "SELECT * FROM RETENTION_RULES"
+```powershell
+docker compose --profile app down -v
 ```
-
-### Option C: Run the API (when available)
-
-```bash
-uvicorn app.api:app --reload
-
-# Visit http://localhost:8000/docs for interactive API docs
-```
-
-## What's Included
-
-After setup, you have:
-
-✓ Db2 12.x running in Docker with vector support  
-✓ Synthetic clinic database with 100+ patients  
-✓ Application tables (PII_MAP, REQUESTS, AUDIT_LOG, CONSENT, etc.)  
-✓ Ground-truth labels for evaluation (`eval/labels.csv`)  
-✓ Working tests demonstrating database connectivity  
-
-## Next Steps
-
-Follow the **Development Plan** in README.md to build out each phase:
-
-- **Phase 1:** Discovery (map schema and foreign keys)
-- **Phase 2:** Classification (detect PII)
-- **Phase 3:** Consent ledger (bitemporal tracking)
-- **Phase 4:** Rights requests (erasure with approval)
-- **Phase 5:** Agent layer and API
-- **Phase 6:** Evaluation and polish
 
 ## Troubleshooting
 
-### Db2 container won't start
-```bash
-# Check logs
-docker compose logs db2
+**Db2 is still starting:** inspect `docker compose logs -f db2` and wait for
+the health status to become `healthy`. The first initialization takes longer
+than later starts.
 
-# Common issues:
-# - Not enough memory (needs 4GB+)
-# - Port 50000 already in use
-# - Previous db2data folder has wrong permissions
-```
+**A host port is occupied:** set `API_PORT_HOST` in `.env` to an unused port
+and recreate the app services. Db2's host port can be changed in
+`docker-compose.yml` if port 50000 is already in use.
 
-### "Connection refused" errors
-```bash
-# Make sure Db2 is fully initialized
-docker compose logs db2 | grep "Setup has completed"
+**Certificate or corrupted package-download errors during Docker build:**
+security software with HTTPS inspection can interfere with Docker downloads.
+Keep TLS verification enabled. Use the security product's HTTPS scanning
+setting or its documented certificate setup; do not add a TLS verification
+bypass or commit a workstation-specific root certificate to the project.
 
-# If not done, wait longer (can take 10 minutes on first run)
-```
+**Reset the database:** `docker compose --profile app down -v` removes all
+local Db2 data. Start again with `docker compose --profile app up -d --build`,
+then rerun the bootstrap and seed commands.
 
-### Python import errors
-```bash
-# Make sure virtual environment is activated
-source .venv/bin/activate  # Linux/Mac
-.venv\Scripts\activate.bat  # Windows
-
-# Reinstall dependencies
-pip install -e ".[dev]"
-```
-
-### Database connection fails
-```bash
-# Check .env file
-cat .env
-
-# Test connection
-python -c "from app.db import conn; c = conn(); print('✓ Connected'); c.close()"
-```
-
-### "Table already exists" errors
-This is normal if you run bootstrap multiple times. The script will continue.
-
-## Getting Help
-
-- Check the detailed README.md for architecture and design
-- Review docs/demo_script.md for usage examples
-- Check the Phase descriptions for implementation guidance
-- File an issue with error logs and steps to reproduce
-
-## Clean Slate Reset
-
-If you want to start fresh:
-
-```bash
-# Stop and remove containers
-docker compose down
-
-# Remove Db2 data
-rm -rf db2data/  # Linux/Mac
-rmdir /s db2data  # Windows
-
-# Recreate .env
-rm .env
-cp .env.example .env
-# Edit .env with your password
-
-# Start over from Step 3
-docker compose up -d
-```
-
----
-
-**Ready?** Head to the main README.md and start implementing Phase 1!
+For architecture, feature details, and deployment guidance, see
+[README.md](README.md) and [deploy/README.md](deploy/README.md).

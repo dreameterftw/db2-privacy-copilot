@@ -220,6 +220,24 @@ def test_metadata_rules_fallback_when_vector_search_is_uncertain(
     assert result.confidence == 0.95
 
 
+def test_classification_progress_output_is_windows_console_safe(monkeypatch, capsys):
+    monkeypatch.setattr(classify_module, "MOCK_MODE", False)
+    monkeypatch.setattr(
+        classify_module,
+        "columns",
+        lambda schema: [("PATIENT", "FULL_NM", "VARCHAR", 100, "Y")],
+    )
+    monkeypatch.setattr(classify_module, "sample_values", lambda *args, **kwargs: [])
+    monkeypatch.setattr(classify_module, "classify_by_name", lambda name: None)
+    monkeypatch.setattr(classify_module, "persist_classification", lambda result: None)
+
+    classify_module.run("DB2INST1")
+
+    output = capsys.readouterr().out
+    assert "[PII] NAME" in output
+    assert output.isascii()
+
+
 class TestColumnClassification:
     """Tests for full column classification."""
 

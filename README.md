@@ -24,6 +24,32 @@ Db2 Privacy Copilot automates the most tedious parts of data privacy compliance:
 | **📝 Audit Trail** | SHA256 hash-chained log — any tampering is detected |
 | **🛡️ Guardrail** | Deterministic SQL validator — blocks injection, DDL, missing WHERE clauses |
 
+## Project summary
+
+**Problem:** Privacy teams can struggle to locate personal data across related
+database tables and coordinate consent, erasure, and audit work. Manual reviews
+are time-consuming and can miss relationships or leave an unclear record of
+decisions.
+
+**Proposed solution:** Db2 Privacy Copilot brings schema discovery, PII
+classification, consent history, rights-request planning, SQL safety checks,
+and audit verification into one Db2-focused decision-support application.
+Sensitive actions remain subject to human review and deterministic guardrails.
+
+**Intended beneficiaries:** Data protection officers, privacy operations
+teams, database administrators, and developers building or evaluating privacy
+workflows for IBM Db2. The included clinic dataset is synthetic and intended
+for demos and testing.
+
+**What is built and how Db2 is used:** A Python application with a Streamlit
+workspace and FastAPI endpoints. IBM Db2 stores the clinic sample schema,
+application records, bitemporal consent history, audit events, and vector
+representations used for semantic PII-label lookup. The application reads Db2
+catalog metadata to discover tables and relationships. A local sentence
+transformer creates embeddings; Db2's vector search compares them with stored
+taxonomy vectors. CrewAI planning tools can propose workflows, while separate
+deterministic checks control execution.
+
 ---
 
 ## Architecture
@@ -74,43 +100,91 @@ connect to or modify Db2.
 
 ---
 
-## Quick Start
+## Local setup with real Db2 (recommended on Windows)
 
-```bash
-# 1. Clone
-git clone https://github.com/dreameterftw/db2-privacy-copilot.git
-cd db2-privacy-copilot
+The supported Windows route uses Docker Desktop for the Db2, API, and Streamlit
+containers. You do **not** need to install Ubuntu or manage a separate Linux
+computer; Docker Desktop runs the Linux containers in its managed environment.
+Use Docker Desktop with its Linux-container/WSL 2 backend, Docker Compose v2,
+and Python 3.11+ only if you also want to run the tests on the host. The first
+image build downloads large machine-learning dependencies and can take several
+minutes and multiple gigabytes of disk space.
 
-# 2. Setup (creates .venv and .env)
-bash setup.sh          # Linux/Mac
-setup.bat              # Windows
+1. Install and start Docker Desktop. Confirm `docker version` and
+   `docker compose version` work in PowerShell.
+2. Clone the repository and create your local environment file:
 
-# 3. Edit .env — set a strong DB2 password
-nano .env
+   ```powershell
+   git clone https://github.com/dreameterftw/db2-privacy-copilot.git
+   cd db2-privacy-copilot
+   Copy-Item .env.example .env
+   notepad .env
+   ```
 
-# 4. Start Db2 in Docker (takes ~10 min on first run)
-docker compose up -d
-docker compose logs -f db2   # wait for "Setup has completed"
+3. In `.env`, set a unique `DB2_PASSWORD` and a long random `API_SECRET_KEY`.
+   Keep `.env` private; it is ignored by Git. `DB2_HOST` is set to `db2` inside
+   the containers by Compose. Do not change it to `localhost` for this setup.
+   `API_PORT_HOST` defaults to `8001`; set it to another free port if needed.
+4. Build and start Db2, the API, and the UI:
 
-# 5. Bootstrap database & seed test data
-source .venv/bin/activate
-python app/bootstrap.py
-python eval/seed.py
+   ```powershell
+   docker compose --profile app up -d --build
+   docker compose ps
+   docker compose logs -f db2
+   ```
 
-# 6. Run tests
-pytest -v
+   The first Db2 startup can take several minutes. Wait until the `db2`
+   service is healthy and its setup has completed. The API and UI share the
+   Compose network with Db2; the UI does not connect through the Windows host.
+5. Create the application tables and synthetic demo data once:
 
-# 7. Launch UI
-streamlit run ui/app.py
+   ```powershell
+   docker compose exec api python -m app.bootstrap
+   docker compose exec api python -m eval.seed
+   ```
 
-# 8. Or launch API
-uvicorn app.api:app --reload
-# → http://localhost:8000/docs
+6. Open the UI at [http://localhost:8501](http://localhost:8501). The API
+   documentation is at [http://localhost:8001/docs](http://localhost:8001/docs)
+   and its Db2 health check is [http://localhost:8001/healthz](http://localhost:8001/healthz).
+   If port 8001 is occupied, set `API_PORT_HOST` in `.env` to another free
+   host port and recreate the services with `docker compose --profile app up -d`.
+
+The Compose `app` profile deliberately turns on the API and UI together with
+Db2. `docker compose up -d` without `--profile app` starts only Db2.
+
+### Stop and reset the local demo
+
+Stop containers while preserving the Db2 data volume:
+
+```powershell
+docker compose --profile app down
 ```
 
-See [QUICKSTART.md](QUICKSTART.md) for a detailed 30-minute walkthrough.
-For the public HTTPS demo, protected CI/CD deployment, and rollback steps, see
-[the deployment guide](deploy/README.md).
+To permanently remove the local database contents too, use
+`docker compose --profile app down -v` only when you intend to delete the demo
+database. Seed data is synthetic; never point this demo at production or real
+personal data.
+
+### Optional host Python setup
+
+For tests and development, install the project on the host with Python 3.11+:
+
+```powershell
+.\setup.bat
+.\.venv\Scripts\Activate.ps1
+pytest -q
+```
+
+On macOS/Linux, use `bash setup.sh`. Running the UI or API directly on Windows
+may not connect to Db2 reliably because the IBM Db2 native driver can have
+platform-specific authentication issues. Use the Compose containers for the
+real Db2 integration; host `DB_MOCK=1` mode is only a mock development mode.
+
+For a detailed walkthrough see [QUICKSTART.md](QUICKSTART.md). For the
+separate public HTTPS demo deployment, CI/CD, and rollback guidance, see
+[the deployment guide](deploy/README.md). Public deployment requires a VM,
+domain, verified SSH access, and GitHub deployment secrets; it is not created
+by the local setup above.
 
 ---
 
@@ -131,7 +205,9 @@ db2-privacy-copilot/
 │   ├── erasure.py      # Dry-run planner + executor
 │   └── guardrail.py    # Deterministic SQL validator
 ├── ui/
-│   └── app.py            # Multi-page Streamlit dashboard
+│   ├── app.py            # Streamlit landing page
+│   ├── pages/            # Dashboard and privacy workflow pages
+│   └── Dockerfile        # Streamlit container image
 ├── eval/
 │   ├── seed.py         # Synthetic clinic data generator
 │   └── run_eval.py     # Classification evaluation harness
@@ -144,7 +220,7 @@ db2-privacy-copilot/
 ├── docs/
 │   ├── architecture.md
 │   └── demo_script.md
-├── docker-compose.yml
+├── docker-compose.yml    # Local Db2, API, and UI services
 ├── pyproject.toml
 └── QUICKSTART.md
 ```
@@ -224,7 +300,7 @@ GET  /audit/verify                # Verify chain (DPO only)
 GET  /audit/subject/{id}          # Subject audit trail (VIEWER+)
 ```
 
-Interactive docs: `http://localhost:8000/docs`
+Interactive docs: `http://localhost:8001/docs` with the local Compose setup.
 
 ---
 

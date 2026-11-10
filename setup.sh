@@ -40,7 +40,7 @@ pip install --upgrade pip
 
 # Install dependencies
 echo "Installing dependencies..."
-pip install -e ".[dev]"
+pip install -e ".[dev,ui]"
 echo "✓ Dependencies installed"
 
 echo
@@ -49,12 +49,11 @@ echo "Setup complete!"
 echo "========================================"
 echo
 echo "Next steps:"
-echo "  1. Edit .env and set DB2_PASSWORD"
-echo "  2. Start Db2: docker compose up -d"
-echo "  3. Wait for Db2 to initialize (5-10 minutes)"
-echo "     Check status: docker compose logs -f db2"
-echo "     Look for: 'Setup has completed'"
-echo "  4. Initialize database: python app/bootstrap.py"
-echo "  5. Seed data: python eval/seed.py"
-echo "  6. Run tests: pytest"
+echo "  1. Edit .env and set DB2_PASSWORD and API_SECRET_KEY"
+echo "  2. Start the local stack: docker compose --profile app up -d --build"
+echo "  3. Wait until Db2 is healthy: docker compose ps"
+echo "  4. Initialize database: docker compose exec api python -m app.bootstrap"
+echo "  5. Seed synthetic data: docker compose exec api python -m eval.seed"
+echo "  6. Open the UI: http://localhost:8501"
+echo "  7. Run host tests: pytest -q"
 echo

@@ -468,9 +468,9 @@ def run(schema: str) -> list[Classification]:
         
         # Show result
         if classification.needs_review:
-            print(f"⚠️  {classification.label} (conf={classification.confidence:.2f}, NEEDS REVIEW)")
+            print(f"[REVIEW] {classification.label} (conf={classification.confidence:.2f})")
         elif classification.label != "NOT_PII":
-            print(f"✓ {classification.label} (conf={classification.confidence:.2f})")
+            print(f"[PII] {classification.label} (conf={classification.confidence:.2f})")
         else:
             print(f"  {classification.label}")
     

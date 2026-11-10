@@ -63,3 +63,6 @@ ui/build/
 # Temporary files
 *.tmp
 *.bak
+
+# Local HTTPS inspection root certificate
+certs/
