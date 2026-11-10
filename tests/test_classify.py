@@ -185,6 +185,41 @@ class TestNameClassification:
         assert result.label == "NOT_PII"
 
 
+@pytest.mark.parametrize(
+    ("table", "column", "expected_label"),
+    [
+        ("PATIENT", "FULL_NM", "NAME"),
+        ("PATIENT", "ADDR1", "ADDRESS"),
+        ("PATIENT", "ADDR2", "ADDRESS"),
+        ("PATIENT", "CITY_NM", "ADDRESS"),
+        ("PATIENT", "PINCODE", "ADDRESS"),
+        ("PATIENT", "NOTES", "FREE_TEXT"),
+        ("APPOINTMENT", "DOCTOR_NM", "NAME"),
+        ("APPOINTMENT", "REASON", "HEALTH"),
+        ("APPOINTMENT", "NOTES", "HEALTH"),
+        ("PRESCRIPTION", "MEDICATION", "HEALTH"),
+        ("PRESCRIPTION", "DOSAGE", "HEALTH"),
+        ("PRESCRIPTION", "INSTRUCTIONS", "HEALTH"),
+        ("LAB_REPORT", "TEST_NM", "HEALTH"),
+        ("LAB_REPORT", "RESULT_VALUE", "HEALTH"),
+        ("LAB_REPORT", "REMARKS", "HEALTH"),
+        ("SUPPORT_TICKET", "DESCRIPTION", "FREE_TEXT"),
+    ],
+)
+def test_metadata_rules_fallback_when_vector_search_is_uncertain(
+    monkeypatch, table, column, expected_label
+):
+    monkeypatch.setattr(classify_module, "MOCK_MODE", False)
+    monkeypatch.setattr(classify_module, "sample_values", lambda *args, **kwargs: [])
+    monkeypatch.setattr(classify_module, "classify_by_name", lambda name: None)
+
+    result = classify_module.classify_column("DB2INST1", table, column, "VARCHAR")
+
+    assert result.label == expected_label
+    assert result.method == "NAME_RULE"
+    assert result.confidence == 0.95
+
+
 class TestColumnClassification:
     """Tests for full column classification."""
 

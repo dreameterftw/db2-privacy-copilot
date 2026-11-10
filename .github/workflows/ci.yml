@@ -66,18 +66,21 @@ jobs:
         run: |
           image=icr.io/db2_community/db2
           image_pulled=false
-          for attempt in 1 2 3; do
+          for attempt in 1 2 3 4 5 6; do
             if docker pull "$image"; then
               image_pulled=true
               break
             fi
-            if [ "$attempt" -lt 3 ]; then
-              echo "Db2 image pull attempt $attempt failed; retrying in 20s"
-              sleep 20
+            if [ "$attempt" -lt 6 ]; then
+              delay=$((attempt * 20))
+              echo "Db2 image pull attempt $attempt/6 failed; retrying in ${delay}s"
+              sleep "$delay"
             fi
           done
           if [ "$image_pulled" != true ]; then
-            echo "Could not pull the Db2 image after 3 attempts"
+            echo "Could not pull $image after 6 attempts. Checking registry reachability for diagnostics."
+            curl --silent --show-error --head --max-time 15 https://icr.io/v2/ || true
+            echo "The Db2 integration job requires outbound HTTPS access to icr.io. Rerun this job if the registry/network timeout was temporary."
             exit 1
           fi
           docker run -d --name db2 --privileged -p 50000:50000 \

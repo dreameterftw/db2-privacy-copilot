@@ -248,6 +248,46 @@ def _name_classification_method() -> str:
     return "NAME_HEURISTIC" if MOCK_MODE else "NAME_VECTOR"
 
 
+def _classify_by_metadata(
+    table_name: str, column_name: str
+) -> Optional[tuple[str, float]]:
+    """Classify clear PII column names without relying on vector search."""
+    table = table_name.upper()
+    tokens = set(_expanded_column_name(column_name).upper().split())
+
+    # More specific address terms take precedence over the NAME token in
+    # columns such as CITY_NM and PINCODE_NM.
+    if tokens & {"ADDRESS", "STREET", "CITY", "STATE", "POSTAL", "ZIP", "PINCODE"}:
+        return "ADDRESS", 0.05
+    if tokens & {"EMAIL", "MAIL"}:
+        return "EMAIL", 0.05
+    if tokens & {"PHONE", "MOBILE", "TELEPHONE", "TEL", "CONTACT"}:
+        return "PHONE", 0.05
+    if tokens & {"DOB", "BIRTHDAY", "BIRTH"}:
+        return "DOB", 0.05
+    if tokens & {"GOVERNMENT", "GOVT", "AADHAAR", "PAN", "PASSPORT"}:
+        return "GOVT_ID", 0.05
+    if tokens & {
+        "DIAGNOSIS", "MEDICATION", "MEDICINE", "DOSAGE", "PRESCRIPTION",
+        "LAB", "TEST", "RESULT", "HEALTH", "INSTRUCTIONS", "REMARKS",
+    }:
+        return "HEALTH", 0.05
+    if tokens & {"NAME", "FIRST", "LAST", "FULL", "NM"}:
+        return "NAME", 0.05
+
+    # These generic fields are sensitive in the seeded clinic schema. Keep
+    # ambiguous rules scoped to their table to avoid treating all NOTES or
+    # REASON columns as sensitive by default.
+    if "NOTES" in tokens and table == "PATIENT":
+        return "FREE_TEXT", 0.05
+    if "DESCRIPTION" in tokens:
+        return "FREE_TEXT", 0.05
+    if table == "APPOINTMENT" and tokens & {"REASON", "NOTES"}:
+        return "HEALTH", 0.05
+
+    return None
+
+
 def classify_column(
     schema: str, table: str, column: str, typename: str
 ) -> Classification:
@@ -315,6 +355,19 @@ def classify_column(
                     confidence=similarity,
                     method=_name_classification_method(),
                 )
+
+    # Clear metadata signals provide a deterministic fallback when vector
+    # search cannot confidently resolve abbreviated database identifiers.
+    metadata_result = _classify_by_metadata(table, column)
+    if metadata_result:
+        label, distance = metadata_result
+        return Classification(
+            table=table,
+            column=column,
+            label=label,
+            confidence=1.0 - distance,
+            method="NAME_RULE",
+        )
 
     # Layer C: Uncertain - may need review
     # If we have value hits but below threshold, flag for review
