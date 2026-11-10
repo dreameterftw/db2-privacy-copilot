@@ -44,3 +44,24 @@ def test_all_bootstrap_sql_creates_required_tables():
         "CONSENT",
         "CONSENT_HISTORY",
     } <= table_names
+
+
+def test_split_ignores_semicolon_inside_string():
+    sql = "INSERT INTO T VALUES ('a; b');\nINSERT INTO T VALUES ('c');"
+
+    assert split_sql(sql) == [
+        "INSERT INTO T VALUES ('a; b')",
+        "INSERT INTO T VALUES ('c')",
+    ]
+
+
+def test_split_ignores_comment_marker_inside_string():
+    sql = "INSERT INTO T VALUES ('x -- y');"
+
+    assert split_sql(sql) == ["INSERT INTO T VALUES ('x -- y')"]
+
+
+def test_split_handles_escaped_quote():
+    sql = "INSERT INTO T VALUES ('it''s; fine');"
+
+    assert split_sql(sql) == ["INSERT INTO T VALUES ('it''s; fine')"]

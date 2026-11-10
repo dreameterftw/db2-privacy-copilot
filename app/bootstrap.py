@@ -27,11 +27,48 @@ MIN_VECTOR_VERSION = (12, 1, 2)
 
 
 def split_sql(text: str) -> list[str]:
-    """Strip comments, then split on ';'. Comments must go first, otherwise a statement
-    preceded by a '-- comment' line can be mistaken for a comment and skipped."""
-    text = re.sub(r"/\*.*?\*/", "", text, flags=re.S)   # block comments
-    text = re.sub(r"--[^\n]*", "", text)                  # line comments
-    return [s.strip() for s in text.split(";") if s.strip()]
+    """Split SQL statements while respecting quoted strings and comments."""
+    statements: list[str] = []
+    buf: list[str] = []
+    i, n = 0, len(text)
+    in_str = False
+
+    while i < n:
+        ch = text[i]
+        nxt = text[i + 1] if i + 1 < n else ""
+        if in_str:
+            buf.append(ch)
+            if ch == "'":
+                if nxt == "'":
+                    buf.append(nxt)
+                    i += 1
+                else:
+                    in_str = False
+        elif ch == "'":
+            in_str = True
+            buf.append(ch)
+        elif ch == "-" and nxt == "-":
+            while i < n and text[i] != "\n":
+                i += 1
+            continue
+        elif ch == "/" and nxt == "*":
+            end = text.find("*/", i + 2)
+            i = n if end == -1 else end + 2
+            buf.append(" ")
+            continue
+        elif ch == ";":
+            statement = "".join(buf).strip()
+            if statement:
+                statements.append(statement)
+            buf = []
+        else:
+            buf.append(ch)
+        i += 1
+
+    tail = "".join(buf).strip()
+    if tail:
+        statements.append(tail)
+    return statements
 
 
 def parse_version(service_level: str) -> tuple[int, int, int] | None:

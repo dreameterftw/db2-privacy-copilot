@@ -69,9 +69,9 @@ CREATE INDEX IDX_AUDIT_CREATED ON AUDIT_LOG(CREATED_AT);
 
 -- Insert initial retention rules
 INSERT INTO RETENTION_RULES (TABNAME, ACTION, REASON, SOURCE, VERIFIED) VALUES
-('PATIENT',        'ANONYMISE', 'Retain referenced records; remove patient identifiers',
+('PATIENT',        'ANONYMISE', 'Keep referenced records; remove patient identifiers',
  'Retention policy required by dependent BILLING records', 'N'),
-('APPOINTMENT',    'ANONYMISE', 'Retain referenced records; remove personal and health data',
+('APPOINTMENT',    'ANONYMISE', 'Keep referenced records; remove personal and health data',
  'Retention policy required by dependent BILLING records', 'N'),
 ('PRESCRIPTION',   'ERASE',     'Prescription records contain health data',
  'DPDP Act Section 13 (verify against Act text)', 'N'),
