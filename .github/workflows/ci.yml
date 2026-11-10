@@ -19,7 +19,7 @@ jobs:
       DB2_PASSWORD: ci-pass
       DB_MOCK: "1"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
@@ -50,7 +50,7 @@ jobs:
       DB2_SCHEMA: DB2INST1
       DB_MOCK: "0"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
