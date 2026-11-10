@@ -64,10 +64,26 @@ jobs:
           python -c "from app.db import MOCK_MODE; assert not MOCK_MODE, 'Db2 driver unavailable; refusing mock integration run'"
       - name: Start Db2
         run: |
+          image=icr.io/db2_community/db2
+          image_pulled=false
+          for attempt in 1 2 3; do
+            if docker pull "$image"; then
+              image_pulled=true
+              break
+            fi
+            if [ "$attempt" -lt 3 ]; then
+              echo "Db2 image pull attempt $attempt failed; retrying in 20s"
+              sleep 20
+            fi
+          done
+          if [ "$image_pulled" != true ]; then
+            echo "Could not pull the Db2 image after 3 attempts"
+            exit 1
+          fi
           docker run -d --name db2 --privileged -p 50000:50000 \
             -e LICENSE=accept -e DB2INSTANCE=db2inst1 \
             -e DB2INST1_PASSWORD="$DB2_PASSWORD" -e DBNAME=clinic \
-            icr.io/db2_community/db2
+            "$image"
           for i in $(seq 1 120); do
             if docker logs db2 2>&1 | grep -q "Setup has completed"; then
               echo "Db2 setup completed after $((i * 10))s"
