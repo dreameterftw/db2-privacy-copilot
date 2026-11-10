@@ -128,7 +128,7 @@ minutes and multiple gigabytes of disk space.
 4. Build and start Db2, the API, and the UI:
 
    ```powershell
-   docker compose --profile app up -d --build
+   docker compose --profile app up -d
    docker compose ps
    docker compose logs -f db2
    ```
@@ -150,7 +150,9 @@ minutes and multiple gigabytes of disk space.
    host port and recreate the services with `docker compose --profile app up -d`.
 
 The Compose `app` profile deliberately turns on the API and UI together with
-Db2. `docker compose up -d` without `--profile app` starts only Db2.
+Db2. `docker compose up -d` without `--profile app` starts only Db2. On a fresh
+clone Compose builds the missing application images. After changing source
+code, rebuild them with `docker compose --profile app up -d --build`.
 
 ### Stop and reset the local demo
 

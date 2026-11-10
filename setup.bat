@@ -47,7 +47,7 @@ echo ========================================
 echo.
 echo Next steps:
 echo   1. Edit .env and set DB2_PASSWORD and API_SECRET_KEY
-echo   2. Start the local stack: docker compose --profile app up -d --build
+echo   2. Start the local stack: docker compose --profile app up -d
 echo   3. Wait until Db2 is healthy: docker compose ps
 echo   4. Initialize database: docker compose exec api python -m app.bootstrap
 echo   5. Seed synthetic data: docker compose exec api python -m eval.seed

@@ -20,6 +20,7 @@ services:
 
   api:
     profiles: ["app"]
+    image: db2-privacy-copilot-api:local
     build:
       context: .
       dockerfile: app/Dockerfile
@@ -53,6 +54,7 @@ services:
 
   ui:
     profiles: ["app"]
+    image: db2-privacy-copilot-ui:local
     build:
       context: .
       dockerfile: ui/Dockerfile

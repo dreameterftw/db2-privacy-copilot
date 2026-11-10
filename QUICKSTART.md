@@ -32,7 +32,7 @@ containers to Db2 using the service name `db2`.
 Build and start all three services:
 
 ```powershell
-docker compose --profile app up -d --build
+docker compose --profile app up -d
 docker compose ps
 docker compose logs -f db2
 ```
@@ -110,8 +110,11 @@ setting or its documented certificate setup; do not add a TLS verification
 bypass or commit a workstation-specific root certificate to the project.
 
 **Reset the database:** `docker compose --profile app down -v` removes all
-local Db2 data. Start again with `docker compose --profile app up -d --build`,
-then rerun the bootstrap and seed commands.
+local Db2 data. Start again with `docker compose --profile app up -d`, then
+rerun the bootstrap and seed commands.
+
+Compose builds missing images on first start. After source changes, rebuild
+with `docker compose --profile app up -d --build`.
 
 For architecture, feature details, and deployment guidance, see
 [README.md](README.md) and [deploy/README.md](deploy/README.md).
