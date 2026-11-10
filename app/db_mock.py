@@ -52,9 +52,12 @@ _DB: dict[str, list[dict]] = {
     "CONSENT_HISTORY": [],
     "RETENTION_RULES": [
         {"TABNAME": "PATIENT",      "ACTION": "ANONYMISE", "REASON": "Identity data",            "VERIFIED": "Y"},
-        {"TABNAME": "APPOINTMENT",  "ACTION": "RETAIN",    "REASON": "Medical records (7yr)",    "VERIFIED": "Y"},
-        {"TABNAME": "PRESCRIPTION", "ACTION": "RETAIN",    "REASON": "Pharmacovigilance",        "VERIFIED": "Y"},
-        {"TABNAME": "LAB_REPORT",   "ACTION": "RETAIN",    "REASON": "Diagnostic records",      "VERIFIED": "N"},
+        {"TABNAME": "APPOINTMENT",  "ACTION": "ANONYMISE", "REASON": "Retained for billing",     "VERIFIED": "N"},
+        {"TABNAME": "BILLING",      "ACTION": "RETAIN",    "REASON": "Financial records",       "VERIFIED": "N"},
+        {"TABNAME": "PRESCRIPTION", "ACTION": "ERASE",     "REASON": "Health data",             "VERIFIED": "N"},
+        {"TABNAME": "LAB_REPORT",   "ACTION": "ERASE",     "REASON": "Health data",             "VERIFIED": "N"},
+        {"TABNAME": "SUPPORT_TICKET", "ACTION": "ANONYMISE", "REASON": "Retain anonymous statistics", "VERIFIED": "N"},
+        {"TABNAME": "MARKETING_LIST", "ACTION": "ERASE",   "REASON": "Consent withdrawn",       "VERIFIED": "N"},
     ],
     "_SYSCAT_COLUMNS": [
         # (TABNAME, COLNAME, TYPENAME, LENGTH, NULLS)

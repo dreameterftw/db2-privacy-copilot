@@ -114,9 +114,9 @@
    - OR via API/CLI
 
 2. View the dry-run plan
-   - Show tables to ERASE (PATIENT, APPOINTMENT, etc.)
-   - Show table to RETAIN (BILLING - with reason)
-   - Show table to ANONYMISE (SUPPORT_TICKET)
+   - Show tables to ERASE (PRESCRIPTION, LAB_REPORT, MARKETING_LIST)
+   - Show tables to ANONYMISE (PATIENT, APPOINTMENT, SUPPORT_TICKET)
+   - Show table to RETAIN (BILLING - its foreign keys still reference the patient and appointment)
    - Display row count estimates
    - Show retention rule verification badges (unverified warning)
 
@@ -133,7 +133,7 @@
    - Show completion receipt
 
 5. Verify results
-   - Check PATIENT table: patient is gone
+   - Check PATIENT and APPOINTMENT: rows remain, personal/health fields are NULL
    - Check BILLING: patient's records still there (RETAINED)
    - Check SUPPORT_TICKET: PII fields are NULL (ANONYMISED)
    - Check AUDIT_LOG: execution is recorded
