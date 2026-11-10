@@ -59,7 +59,7 @@ python -m app.erasure    # Dry-run planner
 ```bash
 python -m app.agents     # Agent tools demo
 python -m app.api        # FastAPI server
-streamlit run ui/streamlit_app.py  # Web UI
+streamlit run ui/app.py  # Web UI
 ```
 - CrewAI agent wrappers (tools only, no execute)
 - FastAPI with authentication
@@ -130,7 +130,7 @@ python -m app.api
 # Visit http://localhost:8000/docs
 
 # Start Streamlit UI
-streamlit run ui/streamlit_app.py
+streamlit run ui/app.py
 # Visit http://localhost:8501
 
 # Lint

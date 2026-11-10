@@ -62,7 +62,7 @@ def verhoeff_checksum(num: str) -> str:
     
     # Return the digit that makes checksum zero
     for i in range(10):
-        if d[c][p[1][i]] == 0:
+        if d[c][p[0][i]] == 0:
             return str(i)
     return "0"
 

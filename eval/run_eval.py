@@ -4,6 +4,7 @@ Evaluation script: compare classification results against ground truth.
 Calculates precision, recall, and F1 for the PII classifier and
 compares against a regex-only baseline.
 """
+import argparse
 import csv
 from collections import defaultdict
 from dataclasses import dataclass
@@ -155,6 +156,22 @@ def calculate_metrics(
     return metrics_by_type
 
 
+def check_thresholds(
+    metrics: Metrics,
+    min_precision: float | None = None,
+    min_recall: float | None = None,
+) -> list[str]:
+    """Return threshold failures for the overall evaluation metrics."""
+    failures = []
+    if min_precision is not None and metrics.precision < min_precision:
+        failures.append(
+            f"precision {metrics.precision:.3f} is below required {min_precision:.3f}"
+        )
+    if min_recall is not None and metrics.recall < min_recall:
+        failures.append(f"recall {metrics.recall:.3f} is below required {min_recall:.3f}")
+    return failures
+
+
 def regex_only_baseline(ground_truth: dict[tuple[str, str], tuple[str, str]]) -> dict[tuple[str, str], str]:
     """
     Simple regex-only baseline for comparison.
@@ -211,8 +228,17 @@ def print_metrics_table(metrics: dict[str, Metrics], title: str) -> None:
     print("=" * 70)
 
 
-def main():
+def main(argv: list[str] | None = None) -> int:
     """Run evaluation and print results."""
+    parser = argparse.ArgumentParser(description="Evaluate PII classification quality.")
+    parser.add_argument("--min-precision", type=float)
+    parser.add_argument("--min-recall", type=float)
+    args = parser.parse_args(argv)
+    for name in ("min_precision", "min_recall"):
+        threshold = getattr(args, name)
+        if threshold is not None and not 0 <= threshold <= 1:
+            parser.error(f"--{name.replace('_', '-')} must be between 0 and 1")
+
     print("=" * 70)
     print("Db2 Privacy Copilot - Classification Evaluation")
     print("=" * 70)
@@ -289,9 +315,14 @@ def main():
     print("Evaluation complete!")
     print("=" * 70)
     
-    # Return overall F1 for potential CI checks
-    return our_overall.f1
+    failures = check_thresholds(our_overall, args.min_precision, args.min_recall)
+    if failures:
+        print("\nEvaluation failed:")
+        for failure in failures:
+            print(f"  - {failure}")
+        return 1
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

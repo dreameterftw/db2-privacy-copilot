@@ -1,4 +1,6 @@
-.PHONY: help setup db-up db-down db-logs bootstrap seed test clean lint format
+.PHONY: help setup db-up db-down db-logs bootstrap seed test clean lint format prod-logs prod-backup
+
+PROD_COMPOSE = docker compose -f deploy/docker-compose.prod.yml --env-file .env
 
 help:
 	@echo "Db2 Privacy Copilot - Available Commands"
@@ -15,6 +17,8 @@ help:
 	@echo "  make security   - Run security scans"
 	@echo "  make clean      - Clean up generated files"
 	@echo "  make reset-db   - Complete database reset"
+	@echo "  make prod-logs  - Follow production demo container logs"
+	@echo "  make prod-backup - Back up the production demo Db2 database"
 
 setup:
 	@echo "Running setup..."
@@ -30,6 +34,12 @@ db-down:
 
 db-logs:
 	docker compose logs -f db2
+
+prod-logs:
+	$(PROD_COMPOSE) logs -f --tail=100
+
+prod-backup:
+	bash deploy/backup.sh
 
 bootstrap:
 	python app/bootstrap.py

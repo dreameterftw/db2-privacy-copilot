@@ -201,7 +201,7 @@ python -m app.erasure
 python -m app.api
 
 # UI
-streamlit run ui/streamlit_app.py
+streamlit run ui/app.py
 ```
 
 ---
@@ -292,7 +292,7 @@ streamlit run ui/streamlit_app.py
 docker compose up -d
 python app/bootstrap.py
 python eval/seed.py
-streamlit run ui/streamlit_app.py
+streamlit run ui/app.py
 ```
 
 ### Demo (12 min)
@@ -452,7 +452,7 @@ python app/bootstrap.py
 python eval/seed.py
 
 # Run
-streamlit run ui/streamlit_app.py
+streamlit run ui/app.py
 ```
 
 **Full documentation:** See `DEPLOYMENT.md`

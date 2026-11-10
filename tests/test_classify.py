@@ -18,8 +18,8 @@ class TestVerhoeffValidation:
     
     def test_valid_aadhaar(self):
         """Test that a valid Aadhaar passes checksum."""
-        # Valid Aadhaar: 234123451234 (example)
-        assert verhoeff_valid("234123451234")
+        # This checksum is generated from the preceding 11 digits.
+        assert verhoeff_valid("234123451235")
     
     def test_invalid_aadhaar(self):
         """Test that invalid Aadhaar fails checksum."""
@@ -29,6 +29,10 @@ class TestVerhoeffValidation:
     def test_verhoeff_empty_string(self):
         """Test Verhoeff with empty string."""
         assert not verhoeff_valid("")
+
+    def test_verhoeff_rejects_non_aadhaar_length(self):
+        """Test that valid checksums with the wrong length are rejected."""
+        assert not verhoeff_valid("12345")
     
     def test_verhoeff_non_numeric(self):
         """Test Verhoeff with non-numeric input."""
@@ -137,6 +141,8 @@ class TestNameClassification:
 
 class TestColumnClassification:
     """Tests for full column classification."""
+
+    pytestmark = pytest.mark.integration
     
     def test_classify_id_column_as_not_pii(self):
         """Test that ID columns are classified as NOT_PII."""
@@ -213,6 +219,8 @@ class TestClassificationDataClass:
 @pytest.mark.integration
 class TestClassificationIntegration:
     """Integration tests that require a populated database."""
+
+    pytestmark = pytest.mark.integration
     
     def test_classify_hidden_pan_in_notes(self):
         """Test that PAN hidden in free text is detected."""

@@ -5,12 +5,26 @@ IMPORTANT: Agents can propose and plan, but NEVER execute.
 Execution requires human approval through the API.
 
 Safety principle: Agents propose, humans approve, code executes.
+
+Note: CrewAI is optional — if unavailable, only the tool functions work (no orchestration).
 """
 import json
 from typing import Any
 
-from crewai import Agent, Crew, Task
-from crewai.tools import tool
+# Try importing CrewAI — fallback gracefully if unavailable
+try:
+    from crewai import Agent, Crew, Task
+    from crewai.tools import tool
+    CREWAI_AVAILABLE = True
+except ImportError:
+    print("[agents] crewai not available — agent orchestration disabled (direct tools still work)")
+    CREWAI_AVAILABLE = False
+    # Mock decorator so @tool syntax doesn't fail
+    def tool(name=None):  # type: ignore[misc]
+        def decorator(func):
+            return func
+        return decorator if name else decorator
+    Agent = Crew = Task = None  # type: ignore[misc,assignment]
 
 from app import classify, discovery, erasure
 from app.config import settings
@@ -127,48 +141,50 @@ def build_erasure_plan_tool(subject_id: int, schema: str = None) -> str:
 # Execution happens only through authenticated API with approval
 
 
-# Agent definitions
+# Agent definitions (only if CrewAI is available)
+if CREWAI_AVAILABLE:
+    discovery_agent = Agent(
+        role="Data Discovery Analyst",
+        goal="Map where personal data lives in the database and identify relationships",
+        backstory="""You are a meticulous data analyst who examines database schemas 
+        to understand data relationships. You never guess - when uncertain, you flag 
+        items for human review. You understand foreign keys, referential integrity, 
+        and safe deletion order.""",
+        tools=[scan_catalog],
+        allow_delegation=False,
+        verbose=True,
+    )
 
-discovery_agent = Agent(
-    role="Data Discovery Analyst",
-    goal="Map where personal data lives in the database and identify relationships",
-    backstory="""You are a meticulous data analyst who examines database schemas 
-    to understand data relationships. You never guess - when uncertain, you flag 
-    items for human review. You understand foreign keys, referential integrity, 
-    and safe deletion order.""",
-    tools=[scan_catalog],
-    allow_delegation=False,
-    verbose=True,
-)
+    classification_agent = Agent(
+        role="PII Classification Specialist",
+        goal="Identify and classify personal data with high accuracy",
+        backstory="""You are a privacy expert who identifies personal data using 
+        pattern matching and semantic analysis. You understand PII types like email, 
+        phone, Aadhaar, PAN, health data, and more. You flag uncertain cases for 
+        human review and never overstate confidence.""",
+        tools=[classify_columns_tool],
+        allow_delegation=False,
+        verbose=True,
+    )
 
-classification_agent = Agent(
-    role="PII Classification Specialist",
-    goal="Identify and classify personal data with high accuracy",
-    backstory="""You are a privacy expert who identifies personal data using 
-    pattern matching and semantic analysis. You understand PII types like email, 
-    phone, Aadhaar, PAN, health data, and more. You flag uncertain cases for 
-    human review and never overstate confidence.""",
-    tools=[classify_columns_tool],
-    allow_delegation=False,
-    verbose=True,
-)
-
-rights_agent = Agent(
-    role="Rights Request Officer",
-    goal="Draft safe, reviewable erasure plans that respect retention rules",
-    backstory="""You are a compliance officer who handles data subject rights 
-    requests. You follow retention rules strictly, explain every exception, and 
-    always present plans for human approval before any action. You understand 
-    that some data must be retained for legal compliance.""",
-    tools=[build_erasure_plan_tool],
-    allow_delegation=False,
-    verbose=True,
-)
+    rights_agent = Agent(
+        role="Rights Request Officer",
+        goal="Draft safe, reviewable erasure plans that respect retention rules",
+        backstory="""You are a compliance officer who handles data subject rights 
+        requests. You follow retention rules strictly, explain every exception, and 
+        always present plans for human approval before any action. You understand 
+        that some data must be retained for legal compliance.""",
+        tools=[build_erasure_plan_tool],
+        allow_delegation=False,
+        verbose=True,
+    )
+else:
+    discovery_agent = classification_agent = rights_agent = None  # type: ignore[assignment]
 
 
 # Crew definitions for common workflows
 
-def create_discovery_crew(schema: str) -> Crew:
+def create_discovery_crew(schema: str):  # type: ignore[misc]
     """
     Create a crew for schema discovery and classification.
     
@@ -178,6 +194,9 @@ def create_discovery_crew(schema: str) -> Crew:
     Returns:
         Configured Crew instance
     """
+    if not CREWAI_AVAILABLE:
+        raise RuntimeError("CrewAI not available — install with: pip install crewai")
+    
     tasks = [
         Task(
             description=f"Scan and map the schema '{schema}'. List all tables, columns, and foreign key relationships.",
@@ -198,7 +217,7 @@ def create_discovery_crew(schema: str) -> Crew:
     )
 
 
-def create_rights_request_crew(subject_id: int, schema: str = None) -> Crew:
+def create_rights_request_crew(subject_id: int, schema: str = None):  # type: ignore[misc]
     """
     Create a crew for handling a rights request.
     
@@ -209,6 +228,9 @@ def create_rights_request_crew(subject_id: int, schema: str = None) -> Crew:
     Returns:
         Configured Crew instance
     """
+    if not CREWAI_AVAILABLE:
+        raise RuntimeError("CrewAI not available — install with: pip install crewai")
+    
     if schema is None:
         schema = settings.db2_schema
     

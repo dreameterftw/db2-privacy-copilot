@@ -60,6 +60,9 @@ def verhoeff_valid(num: str) -> bool:
     Returns:
         True if checksum is valid, False otherwise
     """
+    if len(num) != 12 or not num.isdigit():
+        return False
+
     try:
         c = 0
         for i, ch in enumerate(reversed(num)):
@@ -184,7 +187,7 @@ def classify_by_name(column_name: str) -> Optional[tuple[str, float]]:
     # Simple heuristic matching (will be replaced with vector similarity)
     patterns = {
         "email": ["email", "mail", "e-mail"],
-        "phone": ["phone", "mobile", "tel", "contact"],
+        "phone": ["phone", "mobile", "tel", "contact", "ph"],
         "name": ["name", "full name", "nm"],
         "address": ["address", "addr", "street", "city", "pincode", "postal"],
         "dob": ["dob", "birth", "date of birth"],
@@ -197,9 +200,10 @@ def classify_by_name(column_name: str) -> Optional[tuple[str, float]]:
     
     for label, keywords in patterns.items():
         for keyword in keywords:
-            if keyword in name_lower:
+            is_short_phone_alias = keyword == "ph" and keyword in name_lower.split()
+            if (keyword in name_lower and keyword != "ph") or is_short_phone_alias:
                 # Simple scoring: longer matches score higher
-                score = len(keyword) / len(name_lower)
+                score = 0.7 if is_short_phone_alias else len(keyword) / len(name_lower)
                 if score > best_score:
                     best_score = score
                     best_match = label.upper()

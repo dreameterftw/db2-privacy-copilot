@@ -48,7 +48,7 @@ ui = [
 ]
 
 [tool.setuptools]
-packages = ["app", "eval", "tests"]
+packages = ["app", "eval"]
 
 [tool.ruff]
 line-length = 100
@@ -99,6 +99,7 @@ python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
 addopts = "-v --cov=app --cov-report=html --cov-report=term-missing"
+markers = ["integration: requires a live IBM Db2 database"]
 
 [tool.coverage.run]
 source = ["app"]

@@ -3,7 +3,16 @@ Pytest configuration and shared fixtures.
 """
 import pytest
 
-from app.db import conn
+from app.db import MOCK_MODE, conn
+
+
+def pytest_collection_modifyitems(items):
+    """Skip live-Db2 tests when the in-memory demo backend is active."""
+    if MOCK_MODE:
+        skip_db2 = pytest.mark.skip(reason="requires a live IBM Db2 database")
+        for item in items:
+            if "integration" in item.keywords:
+                item.add_marker(skip_db2)
 
 
 @pytest.fixture

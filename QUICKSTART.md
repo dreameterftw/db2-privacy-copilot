@@ -30,7 +30,7 @@ Edit `.env` and set a strong password:
 
 ```bash
 # .env
-DB2_PASSWORD=YourStrongPassword123  # Change this!
+DB2_PASSWORD=replace-with-a-strong-password
 ```
 
 ## Step 3: Start Db2 (10 min)

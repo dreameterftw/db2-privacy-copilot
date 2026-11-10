@@ -5,6 +5,8 @@ import pytest
 
 from app.db import conn, query
 
+pytestmark = pytest.mark.integration
+
 
 def test_connection():
     """Test that we can connect to Db2."""

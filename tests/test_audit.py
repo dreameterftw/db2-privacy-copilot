@@ -18,6 +18,8 @@ from app.audit import (
 )
 from app.db import query
 
+pytestmark = pytest.mark.integration
+
 
 @pytest.fixture
 def clean_audit_log():

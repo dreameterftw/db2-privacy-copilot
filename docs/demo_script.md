@@ -10,7 +10,7 @@
 
 - [ ] Db2 container running: `docker compose ps`
 - [ ] Data seeded: `SELECT COUNT(*) FROM PATIENT` shows 100+ rows
-- [ ] Streamlit UI running: `streamlit run ui/streamlit_app.py`
+- [ ] Streamlit UI running: `streamlit run ui/app.py`
 - [ ] Browser open to http://localhost:8501
 - [ ] Terminal ready for SQL demos
 - [ ] DBeaver or Db2 CLI ready (optional)

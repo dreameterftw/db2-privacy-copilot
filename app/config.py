@@ -1,7 +1,6 @@
 """
 Configuration management using environment variables.
 """
-import os
 from typing import Optional
 
 from pydantic_settings import BaseSettings
@@ -34,9 +33,13 @@ class Settings(BaseSettings):
     llm_provider: str = "local"
     llm_model: Optional[str] = None
     
+    # Mock mode — skip real Db2 (set DB_MOCK=1 for demo/dev without Docker)
+    db_mock: int = 0
+    
     class Config:
         env_file = ".env"
         case_sensitive = False
+        extra = "allow"  # tolerate extra env vars like DB_MOCK
 
 
 # Global settings instance

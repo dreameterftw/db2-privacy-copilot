@@ -26,6 +26,7 @@ from typing import Optional
 
 from fastapi import Depends, FastAPI, HTTPException, Security, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
 
@@ -163,6 +164,19 @@ def root():
     }
 
 
+@app.get("/healthz")
+def healthz():
+    """Health check for the API and its Db2 connection."""
+    version = query("SELECT SERVICE_LEVEL FROM SYSIBMADM.ENV_INST_INFO")
+    if not version:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Database health check returned no version",
+        )
+    query("SELECT 1 FROM SYSIBM.SYSDUMMY1")
+    return {"status": "ok", "db2": version[0][0]}
+
+
 @app.get("/health")
 def health():
     """Health check endpoint with detailed component status."""
@@ -205,7 +219,7 @@ def health():
     }
     
     status_code = 200 if overall_status == "healthy" else 503
-    return response if status_code == 200 else HTTPException(status_code=status_code, detail=response)
+    return JSONResponse(content=response, status_code=status_code)
 
 
 # Discovery endpoints

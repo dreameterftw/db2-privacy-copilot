@@ -1,5 +1,9 @@
 # Deployment Guide - Db2 Privacy Copilot
 
+> The current public demo deployment is defined in [`deploy/`](deploy/README.md).
+> Follow that guide for CI/CD, HTTPS, health checks, and rollback. The older
+> manual production examples later in this document are retained for reference.
+
 ## Quick Start (Local Development)
 
 ### Prerequisites
@@ -71,7 +75,7 @@ pytest tests/test_db.py -v
 **Option A: Web UI (Recommended for Demo)**
 
 ```bash
-streamlit run ui/streamlit_app.py
+streamlit run ui/app.py
 ```
 
 Visit: http://localhost:8501

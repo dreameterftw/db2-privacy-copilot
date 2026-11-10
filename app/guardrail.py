@@ -101,7 +101,9 @@ def check(
     is_update = UPDATE_PATTERN.match(sql_stripped)
     
     if not (is_delete or is_update):
-        raise Blocked("statement shape not allowed (must be DELETE or UPDATE with WHERE and ?)")
+        raise Blocked(
+            "statement shape not allowed (must be DELETE or UPDATE with WHERE and parameterized values)"
+        )
     
     # Rule 4: Must have WHERE clause
     if "WHERE" not in sql.upper():

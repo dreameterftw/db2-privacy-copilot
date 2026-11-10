@@ -19,6 +19,8 @@ from app.erasure import (
 )
 from app.guardrail import Blocked
 
+pytestmark = pytest.mark.integration
+
 
 @pytest.fixture
 def test_patient_with_data(db_conn):
@@ -46,12 +48,9 @@ def test_patient_with_data(db_conn):
     yield patient_id
     
     # Cleanup (cascading delete will handle related records)
-    try:
-        cur.execute("DELETE FROM APPOINTMENT WHERE PATIENT_ID = ?", (patient_id,))
-        cur.execute("DELETE FROM PATIENT WHERE ID = ?", (patient_id,))
-        db_conn.commit()
-    except:
-        pass  # May already be deleted by test
+    cur.execute("DELETE FROM APPOINTMENT WHERE PATIENT_ID = ?", (patient_id,))
+    cur.execute("DELETE FROM PATIENT WHERE ID = ?", (patient_id,))
+    db_conn.commit()
 
 
 class TestRetentionRules:

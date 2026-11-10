@@ -55,6 +55,12 @@ Db2 Privacy Copilot automates the most tedious parts of data privacy compliance:
 
 **Key safety principle**: Agents can only **propose** — execution requires human approval, then passes through the deterministic guardrail.
 
+The Db2 connection is implemented with `ibm_db`/`ibm_db_dbi` in `app/db.py`.
+Schema discovery and classification query the live Db2 catalog and sample
+columns, while consent, erasure plans, and the audit chain persist to Db2 tables.
+CrewAI is a required project dependency and is wired to read-only/planning tools
+in `app/agents.py`; the agents do not execute destructive SQL.
+
 ---
 
 ## Quick Start
@@ -84,7 +90,7 @@ python eval/seed.py
 pytest -v
 
 # 7. Launch UI
-streamlit run ui/streamlit_app.py
+streamlit run ui/app.py
 
 # 8. Or launch API
 uvicorn app.api:app --reload
@@ -92,6 +98,8 @@ uvicorn app.api:app --reload
 ```
 
 See [QUICKSTART.md](QUICKSTART.md) for a detailed 30-minute walkthrough.
+For the public HTTPS demo, protected CI/CD deployment, and rollback steps, see
+[the deployment guide](deploy/README.md).
 
 ---
 
@@ -112,7 +120,7 @@ db2-privacy-copilot/
 │   ├── erasure.py      # Dry-run planner + executor
 │   └── guardrail.py    # Deterministic SQL validator
 ├── ui/
-│   └── streamlit_app.py  # Full-featured web dashboard
+│   └── app.py            # Multi-page Streamlit dashboard
 ├── eval/
 │   ├── seed.py         # Synthetic clinic data generator
 │   └── run_eval.py     # Classification evaluation harness
@@ -225,7 +233,7 @@ DB2_HOST=localhost
 DB2_PORT=50000
 DB2_DB=clinic
 DB2_USER=db2inst1
-DB2_PASSWORD=YourStrongPassword123
+DB2_PASSWORD=replace-with-a-strong-password
 DB2_SCHEMA=DB2INST1
 
 API_SECRET_KEY=change-this-in-production

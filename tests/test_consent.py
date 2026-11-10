@@ -16,6 +16,8 @@ from app.consent import (
     withdraw,
 )
 
+pytestmark = pytest.mark.integration
+
 
 @pytest.fixture
 def test_patient_id(db_conn):

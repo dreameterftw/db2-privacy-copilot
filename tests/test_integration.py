@@ -11,6 +11,8 @@ from app import agents, audit, consent, erasure
 from app.config import settings
 from app.db import conn, query
 
+pytestmark = pytest.mark.integration
+
 
 @pytest.fixture
 def integration_patient(db_conn):
@@ -45,13 +47,10 @@ def integration_patient(db_conn):
     yield patient_id
     
     # Cleanup
-    try:
-        cur.execute("DELETE FROM BILLING WHERE PATIENT_ID = ?", (patient_id,))
-        cur.execute("DELETE FROM APPOINTMENT WHERE PATIENT_ID = ?", (patient_id,))
-        cur.execute("DELETE FROM PATIENT WHERE ID = ?", (patient_id,))
-        db_conn.commit()
-    except:
-        pass
+    cur.execute("DELETE FROM BILLING WHERE PATIENT_ID = ?", (patient_id,))
+    cur.execute("DELETE FROM APPOINTMENT WHERE PATIENT_ID = ?", (patient_id,))
+    cur.execute("DELETE FROM PATIENT WHERE ID = ?", (patient_id,))
+    db_conn.commit()
 
 
 class TestDiscoveryToClassification:

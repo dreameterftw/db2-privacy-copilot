@@ -13,6 +13,8 @@ from app.discovery import (
     tables,
 )
 
+pytestmark = pytest.mark.integration
+
 
 def test_tables_returns_list():
     """Test that tables() returns a list of tables."""
