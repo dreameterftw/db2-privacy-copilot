@@ -35,7 +35,7 @@ def sample_patient_id(db_conn):
     db_conn.commit()
     
     cur.execute("SELECT ID FROM PATIENT WHERE CUST_MAIL_ID = 'test@example.com'")
-    patient_id = cur.fetchone()[0]
+    patient_id = int(cur.fetchone()[0])
     
     yield patient_id
     

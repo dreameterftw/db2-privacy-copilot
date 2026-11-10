@@ -150,6 +150,40 @@ class TestNameClassification:
         assert result.label == "EMAIL"
         assert result.method == "NAME_VECTOR"
 
+    @pytest.mark.parametrize(
+        ("column", "expanded"),
+        [("PH_NO", "phone number"), ("ADDR1", "address")],
+    )
+    def test_live_name_lookup_expands_abbreviations(
+        self, monkeypatch, column, expanded
+    ):
+        monkeypatch.setattr(classify_module, "MOCK_MODE", False)
+        looked_up = []
+
+        def classify_name(value):
+            looked_up.append(value)
+            return "PHONE", 0.1
+
+        monkeypatch.setattr(
+            "app.vector_store.classify_column_name", classify_name
+        )
+
+        classify_by_name(column)
+
+        assert looked_up == [expanded]
+
+    def test_decoy_reference_number_is_not_classified_as_phone(self, monkeypatch):
+        monkeypatch.setattr(
+            classify_module, "sample_values", lambda *args, **kwargs: [9876543210]
+        )
+        monkeypatch.setattr(classify_module, "classify_by_name", lambda column: ("PHONE", 0.1))
+
+        result = classify_column(
+            "DB2INST1", "SUPPORT_TICKET", "TICKET_REF_NO", "VARCHAR"
+        )
+
+        assert result.label == "NOT_PII"
+
 
 class TestColumnClassification:
     """Tests for full column classification."""

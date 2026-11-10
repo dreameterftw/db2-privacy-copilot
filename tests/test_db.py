@@ -25,7 +25,10 @@ def test_simple_query():
 
 def test_parameterized_query():
     """Test parameterized queries work correctly."""
-    result = query("SELECT ? + ? FROM SYSIBM.SYSDUMMY1", (5, 7))
+    result = query(
+        "SELECT CAST(? AS INTEGER) + CAST(? AS INTEGER) FROM SYSIBM.SYSDUMMY1",
+        (5, 7),
+    )
     assert result is not None
     assert result[0][0] == 12
 

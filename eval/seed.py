@@ -189,13 +189,6 @@ def seed_database():
             ])
             status = random.choice(["SCHEDULED", "COMPLETED", "CANCELLED"])
             notes = fake.sentence() if random.random() > 0.5 else None
-            if not appt_ids:
-                print(
-                    "DEBUG params:",
-                    [(type(value).__name__, value) for value in (
-                        patient_id, appt_date, appt_time, doctor, reason, status, notes
-                    )],
-                )
             
             cur.execute("""
                 INSERT INTO APPOINTMENT (

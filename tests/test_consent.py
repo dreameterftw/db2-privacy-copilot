@@ -31,7 +31,7 @@ def test_patient_id(db_conn):
     db_conn.commit()
     
     cur.execute("SELECT ID FROM PATIENT WHERE CUST_MAIL_ID = 'consent@test.com'")
-    patient_id = cur.fetchone()[0]
+    patient_id = int(cur.fetchone()[0])
     
     yield patient_id
     
@@ -110,7 +110,7 @@ class TestConsentValidation:
         
         assert valid_on(test_patient_id, "MARKETING", "2026-01-01")
         assert valid_on(test_patient_id, "MARKETING", "2026-06-15")
-        assert valid_on(test_patient_id, "MARKETING", "2026-12-31")
+        assert not valid_on(test_patient_id, "MARKETING", "2026-12-31")
     
     def test_valid_on_outside_period(self, test_patient_id):
         """Test consent is invalid outside granted period."""
@@ -249,5 +249,5 @@ class TestBitemporalQueries:
         assert not valid_on(test_patient_id, "MARKETING", "2026-05-31")  # Before
         assert valid_on(test_patient_id, "MARKETING", "2026-06-01")      # Start
         assert valid_on(test_patient_id, "MARKETING", "2026-07-15")      # During
-        assert valid_on(test_patient_id, "MARKETING", "2026-08-31")      # End
+        assert not valid_on(test_patient_id, "MARKETING", "2026-08-31")  # End is exclusive
         assert not valid_on(test_patient_id, "MARKETING", "2026-09-01")  # After

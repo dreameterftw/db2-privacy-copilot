@@ -81,7 +81,7 @@ _DB: dict[str, list[dict]] = {
         ("LAB_REPORT",   "RESULT_VAL",   "VARCHAR",  200, "Y"),
     ],
     "_SYSCAT_TABLES": [
-        ("PATIENT",), ("APPOINTMENT",), ("PRESCRIPTION",), ("LAB_REPORT",),
+        ("PATIENT", "T"), ("APPOINTMENT", "T"), ("PRESCRIPTION", "T"), ("LAB_REPORT", "T"),
     ],
     "_SYSCAT_REFERENCES": [
         # (CHILD, PARENT, FK_COLS, PK_COLS)
@@ -106,10 +106,15 @@ def _mock_query(sql: str, params: tuple = ()) -> Optional[list[tuple]]:
     # --- SYSCAT.COLUMNS ---
     if "SYSCAT.COLUMNS" in sql_up:
         schema = params[0].upper() if params else "DB2INST1"
+        if schema != "DB2INST1":
+            return []
         return _DB["_SYSCAT_COLUMNS"]
 
     # --- SYSCAT.TABLES ---
     if "SYSCAT.TABLES" in sql_up:
+        schema = params[0].upper() if params else "DB2INST1"
+        if schema != "DB2INST1":
+            return []
         return _DB["_SYSCAT_TABLES"]
 
     # --- SYSCAT.REFERENCES ---

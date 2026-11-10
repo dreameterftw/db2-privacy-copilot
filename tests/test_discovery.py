@@ -203,6 +203,11 @@ def test_delete_order_handles_missing_table():
         delete_order(settings.db2_schema, "NONEXISTENT_TABLE")
 
 
+def test_delete_order_rejects_missing_schema():
+    with pytest.raises(KeyError):
+        delete_order("NONEXISTENT_SCHEMA", "PATIENT")
+
+
 def test_columns_empty_schema():
     """Test columns() with a non-existent schema."""
     result = columns("NONEXISTENT_SCHEMA")

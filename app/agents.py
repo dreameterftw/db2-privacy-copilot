@@ -251,6 +251,11 @@ def create_rights_request_crew(subject_id: int, schema: str = None):  # type: ig
 
 # Convenience functions for direct tool use (without agent wrapper)
 
+def _call_tool(tool_object: Any, *args: Any) -> str:
+    function = getattr(tool_object, "func", tool_object)
+    return function(*args)
+
+
 def discover_schema(schema: str) -> dict[str, Any]:
     """
     Discover schema without agent wrapper.
@@ -261,7 +266,7 @@ def discover_schema(schema: str) -> dict[str, Any]:
     Returns:
         Schema summary dict
     """
-    result = scan_catalog(schema)
+    result = _call_tool(scan_catalog, schema)
     return json.loads(result)
 
 
@@ -275,7 +280,7 @@ def classify_schema(schema: str) -> dict[str, Any]:
     Returns:
         Classification summary dict
     """
-    result = classify_columns_tool(schema)
+    result = _call_tool(classify_columns_tool, schema)
     return json.loads(result)
 
 
@@ -290,7 +295,7 @@ def plan_erasure(subject_id: int, schema: str = None) -> dict[str, Any]:
     Returns:
         Erasure plan dict
     """
-    result = build_erasure_plan_tool(subject_id, schema)
+    result = _call_tool(build_erasure_plan_tool, subject_id, schema)
     return json.loads(result)
 
 

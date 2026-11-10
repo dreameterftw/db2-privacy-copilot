@@ -95,6 +95,10 @@ def delete_order(schema: str, root: str) -> list[str]:
         ValueError: If FK graph contains cycles
         KeyError: If root table is not found
     """
+    known_tables = {row[0].strip().upper() for row in tables(schema) if row}
+    if root.upper() not in known_tables:
+        raise KeyError(f"Root table {schema}.{root} not found")
+
     # Build directed graph: parent -> child
     g = nx.DiGraph()
     
@@ -114,12 +118,9 @@ def delete_order(schema: str, root: str) -> list[str]:
         pass  # Good - no cycles
     
     # Get all tables reachable from root
-    if root not in g:
-        # Root might have no outgoing edges (children) - that's OK
-        # Add it to the graph explicitly
-        g.add_node(root)
-    
-    reachable = nx.descendants(g, root) | {root}
+    g.add_node(root.upper())
+
+    reachable = nx.descendants(g, root.upper()) | {root.upper()}
     subgraph = g.subgraph(reachable)
     
     # Topological sort, then reverse (children first)

@@ -140,7 +140,7 @@ def append(
         
         # Get the inserted ID
         cur.execute("VALUES IDENTITY_VAL_LOCAL()")
-        record_id = cur.fetchone()[0]
+        record_id = int(cur.fetchone()[0])
         
         c.commit()
         return record_id
@@ -205,20 +205,26 @@ def verify_chain() -> tuple[bool, Optional[str]]:
     
     # Verify each record
     for i, record in enumerate(records):
-        # Recompute hash
-        expected_hash = compute_hash(
-            record.prev_hash,
-            record.actor,
-            record.action,
-            record.subject,
-            record.detail,
+        is_genesis_anchor = (
+            i == 0
+            and record.action == "GENESIS"
+            and record.prev_hash == "GENESIS"
+            and record.hash == "GENESIS"
         )
-        
-        if expected_hash != record.hash:
-            return False, (
-                f"Record ID={record.id} has incorrect hash. "
-                f"Expected {expected_hash}, got {record.hash}"
+        if not is_genesis_anchor:
+            expected_hash = compute_hash(
+                record.prev_hash,
+                record.actor,
+                record.action,
+                record.subject,
+                record.detail,
             )
+
+            if expected_hash != record.hash:
+                return False, (
+                    f"Record ID={record.id} has incorrect hash. "
+                    f"Expected {expected_hash}, got {record.hash}"
+                )
         
         # Check chain (except for first record)
         if i > 0:

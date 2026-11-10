@@ -22,6 +22,30 @@ PAN_PATTERN = re.compile(r"\b[A-Z]{5}[0-9]{4}[A-Z]\b")
 AADHAAR_PATTERN = re.compile(r"\b\d{4}\s?\d{4}\s?\d{4}\b")
 EMAIL_PATTERN = re.compile(r"[\w.+-]+@[\w-]+\.[\w.]+")
 PHONE_PATTERN = re.compile(r"\b(?:\+91[- ]?)?[6-9]\d{9}\b")
+_COLUMN_ABBREVIATIONS = {
+    "ADDR": "address",
+    "ADDR1": "address",
+    "ADDR2": "address",
+    "CITY": "city",
+    "CUST": "customer",
+    "DOB": "date of birth",
+    "DT": "date",
+    "GOVT": "government",
+    "ID": "identifier",
+    "MAIL": "email",
+    "MOB": "mobile",
+    "NM": "name",
+    "NO": "number",
+    "PH": "phone",
+    "PIN": "postal",
+    "TEL": "telephone",
+}
+_PHONE_DECOY_TOKENS = {"INVOICE", "ORDER", "REF", "SERIAL", "TICKET", "TXN"}
+
+
+def _expanded_column_name(column_name: str) -> str:
+    tokens = re.split(r"[_\-\s]+", column_name.upper())
+    return " ".join(_COLUMN_ABBREVIATIONS.get(token, token.lower()) for token in tokens if token)
 
 # Verhoeff algorithm tables for Aadhaar validation
 _VERHOEFF_D = [
@@ -217,7 +241,7 @@ def classify_by_name(column_name: str) -> Optional[tuple[str, float]]:
 
     from app.vector_store import classify_column_name
 
-    return classify_column_name(column_name)
+    return classify_column_name(_expanded_column_name(column_name))
 
 
 def _name_classification_method() -> str:
@@ -260,7 +284,11 @@ def classify_column(
 
     # Check if any pattern has high enough hit rate
     value_threshold = settings.pii_value_threshold
+    column_tokens = set(re.split(r"[_\-\s]+", column.upper()))
+    phone_decoy = bool(column_tokens & _PHONE_DECOY_TOKENS)
     for pattern, hit_rate in value_hits.items():
+        if pattern == "PHONE" and phone_decoy:
+            continue
         if hit_rate >= value_threshold:
             return Classification(
                 table=table,
@@ -275,22 +303,36 @@ def classify_column(
     name_result = classify_by_name(column)
     if name_result:
         label, distance = name_result
-        similarity = 1.0 - distance
-        name_threshold = settings.pii_name_threshold
+        if not (label == "PHONE" and phone_decoy):
+            similarity = 1.0 - distance
+            name_threshold = settings.pii_name_threshold
 
-        if distance <= name_threshold:
-            return Classification(
-                table=table,
-                column=column,
-                label=label,
-                confidence=similarity,
-                method=_name_classification_method(),
-            )
+            if distance <= name_threshold:
+                return Classification(
+                    table=table,
+                    column=column,
+                    label=label,
+                    confidence=similarity,
+                    method=_name_classification_method(),
+                )
 
     # Layer C: Uncertain - may need review
     # If we have value hits but below threshold, flag for review
     if value_hits:
-        best_pattern = max(value_hits.items(), key=lambda x: x[1])
+        eligible_hits = {
+            pattern: hit_rate
+            for pattern, hit_rate in value_hits.items()
+            if not (pattern == "PHONE" and phone_decoy)
+        }
+        if not eligible_hits:
+            return Classification(
+                table=table,
+                column=column,
+                label="NOT_PII",
+                confidence=0.80,
+                method="DEFAULT",
+            )
+        best_pattern = max(eligible_hits.items(), key=lambda x: x[1])
         return Classification(
             table=table,
             column=column,

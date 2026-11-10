@@ -75,7 +75,7 @@ def withdraw(
     """
     Withdraw consent for a specific purpose.
     
-    This updates the business period end date to reflect withdrawal.
+    This marks the withdrawn business-time portion as not granted.
     The history table preserves the original grant.
     
     Args:
@@ -90,19 +90,18 @@ def withdraw(
     if isinstance(effective, date):
         effective = effective.isoformat()
     
-    # Update the business period end date
-    # This creates a new system-time version
+    # Db2 manages the period boundaries; update the value for the withdrawn portion.
     sql = """
         UPDATE CONSENT
         FOR PORTION OF BUSINESS_TIME FROM ? TO '9999-12-30'
-        SET BUS_END = ?
+        SET GRANTED = 'N'
         WHERE PATIENT_ID = ? AND PURPOSE = ? AND GRANTED = 'Y'
     """
     
     try:
         c = conn()
         cur = c.cursor()
-        cur.execute(sql, (effective, effective, patient_id, purpose.upper()))
+        cur.execute(sql, (effective, patient_id, purpose.upper()))
         
         if cur.rowcount == 0:
             # No active consent found, insert a withdrawal record

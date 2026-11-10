@@ -28,7 +28,7 @@ def integration_patient(db_conn):
     db_conn.commit()
     
     cur.execute("SELECT ID FROM PATIENT WHERE CUST_MAIL_ID = 'integration@test.com'")
-    patient_id = cur.fetchone()[0]
+    patient_id = int(cur.fetchone()[0])
     
     # Insert appointment
     cur.execute("""
@@ -36,7 +36,7 @@ def integration_patient(db_conn):
         VALUES (?, '2026-12-01', '14:00:00', 'Dr. Integration', 'Test', 'SCHEDULED')
     """, (patient_id,))
     cur.execute("SELECT IDENTITY_VAL_LOCAL() FROM SYSIBM.SYSDUMMY1")
-    appointment_id = cur.fetchone()[0]
+    appointment_id = int(cur.fetchone()[0])
     
     # Insert billing (should be RETAINED)
     cur.execute("""

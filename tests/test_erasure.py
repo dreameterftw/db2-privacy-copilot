@@ -36,7 +36,7 @@ def test_patient_with_data(db_conn):
     db_conn.commit()
     
     cur.execute("SELECT ID FROM PATIENT WHERE CUST_MAIL_ID = 'erasure@test.com'")
-    patient_id = cur.fetchone()[0]
+    patient_id = int(cur.fetchone()[0])
     
     # Insert related appointment
     cur.execute("""
@@ -288,8 +288,8 @@ class TestExecution:
             )
     
     @pytest.mark.integration
-    def test_execute_deletes_data(self, test_patient_with_data, db_conn):
-        """Test that execution actually deletes data."""
+    def test_execute_anonymises_retained_patient(self, test_patient_with_data, db_conn):
+        """Test that retained patient rows remain with identifying fields removed."""
         # This is a real execution test - be careful!
         steps = plan(test_patient_with_data, settings.db2_schema, "PATIENT")
         
@@ -309,10 +309,14 @@ class TestExecution:
             correct_hash
         )
         
-        # Verify patient is deleted
-        cur.execute("SELECT COUNT(*) FROM PATIENT WHERE ID = ?", (test_patient_with_data,))
-        count_after = cur.fetchone()[0]
-        assert count_after == 0
+        cur.execute(
+            "SELECT FULL_NM, CUST_MAIL_ID, PH_NO, GOVT_ID "
+            "FROM PATIENT WHERE ID = ?",
+            (test_patient_with_data,),
+        )
+        row_after = cur.fetchone()
+        assert row_after is not None
+        assert row_after == (None, None, None, None)
     
     @pytest.mark.integration
     def test_execute_creates_audit_record(self, test_patient_with_data):
