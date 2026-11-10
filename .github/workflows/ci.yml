@@ -68,21 +68,74 @@ jobs:
             -e LICENSE=accept -e DB2INSTANCE=db2inst1 \
             -e DB2INST1_PASSWORD="$DB2_PASSWORD" -e DBNAME=clinic \
             icr.io/db2_community/db2
-          ready=false
-          for _ in $(seq 1 60); do
-            if docker exec db2 su - db2inst1 -c "db2 connect to clinic" >/dev/null 2>&1; then
-              ready=true
+          for i in $(seq 1 120); do
+            if docker logs db2 2>&1 | grep -q "Setup has completed"; then
+              echo "Db2 setup completed after $((i * 10))s"
               break
             fi
-            sleep 15
+            if [ "$(docker inspect -f '{{.State.Running}}' db2)" != "true" ]; then
+              echo "Db2 container stopped during setup"
+              docker logs --tail 80 db2
+              exit 1
+            fi
+            sleep 10
           done
-          if [ "$ready" != true ]; then
-            docker logs db2
+          if ! docker logs db2 2>&1 | grep -q "Setup has completed"; then
+            docker logs --tail 80 db2
+            echo "Db2 setup did not finish within 20 minutes"
             exit 1
           fi
+          ready_checks=0
+          for _ in $(seq 1 20); do
+            if docker exec db2 su - db2inst1 -c \
+              "db2 connect to clinic >/dev/null 2>&1 && db2 connect reset >/dev/null 2>&1"; then
+              ready_checks=$((ready_checks + 1))
+              if [ "$ready_checks" -ge 3 ]; then
+                echo "Db2 accepted three consecutive health checks"
+                exit 0
+              fi
+            else
+              ready_checks=0
+            fi
+            sleep 5
+          done
+          echo "Db2 did not remain connectable after setup"
+          docker logs --tail 80 db2
+          exit 1
       - name: Initialize and seed demo data
         run: |
-          python -m app.bootstrap
+          bootstrapped=false
+          for attempt in 1 2 3; do
+            if python -m app.bootstrap; then
+              bootstrapped=true
+              break
+            fi
+            if [ "$attempt" -eq 3 ]; then
+              echo "Bootstrap failed after $attempt attempts"
+              docker logs --tail 100 db2
+              exit 1
+            fi
+            echo "Bootstrap attempt $attempt failed; checking Db2 before retry"
+            db_ready=false
+            for _ in $(seq 1 20); do
+              if docker exec db2 su - db2inst1 -c \
+                "db2 connect to clinic >/dev/null 2>&1 && db2 connect reset >/dev/null 2>&1"; then
+                db_ready=true
+                break
+              fi
+              sleep 5
+            done
+            if [ "$db_ready" != true ]; then
+              echo "Db2 did not recover after bootstrap failure"
+              docker logs --tail 100 db2
+              exit 1
+            fi
+            sleep 10
+          done
+          if [ "$bootstrapped" != true ]; then
+            echo "Bootstrap did not complete"
+            exit 1
+          fi
           python -m eval.seed
       - name: Run integration tests and evaluation gate
         run: |

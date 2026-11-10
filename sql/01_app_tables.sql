@@ -55,8 +55,12 @@ CREATE TABLE AUDIT_LOG (
 
 -- Insert genesis audit row
 INSERT INTO AUDIT_LOG (ACTOR, ACTION, SUBJECT, DETAIL, PREV_HASH, HASH)
-VALUES ('SYSTEM', 'GENESIS', NULL, '{"event":"audit_log_initialized"}', 
-        'GENESIS', 'GENESIS');
+SELECT 'SYSTEM', 'GENESIS', NULL, '{"event":"audit_log_initialized"}',
+       'GENESIS', 'GENESIS'
+FROM SYSIBM.SYSDUMMY1
+WHERE NOT EXISTS (
+    SELECT 1 FROM AUDIT_LOG WHERE ACTION = 'GENESIS'
+);
 
 -- Create indexes
 CREATE INDEX IDX_PII_MAP_LABEL ON PII_MAP(LABEL);
@@ -68,18 +72,25 @@ CREATE INDEX IDX_AUDIT_ACTION ON AUDIT_LOG(ACTION);
 CREATE INDEX IDX_AUDIT_CREATED ON AUDIT_LOG(CREATED_AT);
 
 -- Insert initial retention rules
-INSERT INTO RETENTION_RULES (TABNAME, ACTION, REASON, SOURCE, VERIFIED) VALUES
-('PATIENT',        'ANONYMISE', 'Keep referenced records; remove patient identifiers',
- 'Retention policy required by dependent BILLING records', 'N'),
-('APPOINTMENT',    'ANONYMISE', 'Keep referenced records; remove personal and health data',
- 'Retention policy required by dependent BILLING records', 'N'),
-('PRESCRIPTION',   'ERASE',     'Prescription records contain health data',
- 'DPDP Act Section 13 (verify against Act text)', 'N'),
-('LAB_REPORT',     'ERASE',     'Lab reports contain health data',
- 'DPDP Act Section 13 (verify against Act text)', 'N'),
-('BILLING',        'RETAIN',    'Financial records required for tax compliance',
- 'Income Tax Act, verify retention period under tax law', 'N'),
-('SUPPORT_TICKET', 'ANONYMISE', 'Keep ticket statistics, remove identifiers',
- 'Internal policy - balance service quality with privacy', 'N'),
-('MARKETING_LIST', 'ERASE',     'Marketing consent withdrawn',
- 'DPDP Act consent withdrawal provisions (verify)', 'N');
+MERGE INTO RETENTION_RULES AS target
+USING (
+    VALUES
+        ('PATIENT',        'ANONYMISE', 'Keep referenced records; remove patient identifiers',
+         'Retention policy required by dependent BILLING records', 'N'),
+        ('APPOINTMENT',    'ANONYMISE', 'Keep referenced records; remove personal and health data',
+         'Retention policy required by dependent BILLING records', 'N'),
+        ('PRESCRIPTION',   'ERASE',     'Prescription records contain health data',
+         'DPDP Act Section 13 (verify against Act text)', 'N'),
+        ('LAB_REPORT',     'ERASE',     'Lab reports contain health data',
+         'DPDP Act Section 13 (verify against Act text)', 'N'),
+        ('BILLING',        'RETAIN',    'Financial records required for tax compliance',
+         'Income Tax Act, verify retention period under tax law', 'N'),
+        ('SUPPORT_TICKET', 'ANONYMISE', 'Keep ticket statistics, remove identifiers',
+         'Internal policy - balance service quality with privacy', 'N'),
+        ('MARKETING_LIST', 'ERASE',     'Marketing consent withdrawn',
+         'DPDP Act consent withdrawal provisions (verify)', 'N')
+) AS source (TABNAME, ACTION, REASON, SOURCE, VERIFIED)
+ON target.TABNAME = source.TABNAME
+WHEN NOT MATCHED THEN
+    INSERT (TABNAME, ACTION, REASON, SOURCE, VERIFIED)
+    VALUES (source.TABNAME, source.ACTION, source.REASON, source.SOURCE, source.VERIFIED);

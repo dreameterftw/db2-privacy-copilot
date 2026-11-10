@@ -10,12 +10,19 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def test_seeded_retention_rules_preserve_billing_foreign_keys():
     sql = (ROOT / "sql" / "01_app_tables.sql").read_text(encoding="utf-8")
-    values = sql.split("INSERT INTO RETENTION_RULES", 1)[1]
+    values = sql.split("MERGE INTO RETENTION_RULES", 1)[1]
     actions = dict(re.findall(r"\('([^']+)'\s*,\s*'([^']+)'", values))
 
     assert actions["PATIENT"] == "ANONYMISE"
     assert actions["APPOINTMENT"] == "ANONYMISE"
     assert actions["BILLING"] == "RETAIN"
+
+
+def test_bootstrap_seed_data_is_idempotent():
+    sql = (ROOT / "sql" / "01_app_tables.sql").read_text(encoding="utf-8")
+
+    assert "WHERE NOT EXISTS" in sql
+    assert "WHEN NOT MATCHED THEN" in sql
 
 
 def test_plan_anonymises_referenced_records_and_retains_billing(monkeypatch):
