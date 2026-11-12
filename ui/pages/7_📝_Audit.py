@@ -1,14 +1,19 @@
 """
 Audit Log Page
 """
-import streamlit as st
-import sys
 import os
+import sys
+
+import streamlit as st
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../.."))
 
 from app import audit
+from ui.theme import apply_workspace_theme
 
 st.set_page_config(page_title="Audit Log", page_icon="📝", layout="wide")
+
+apply_workspace_theme()
 
 if 'authenticated' not in st.session_state or not st.session_state.authenticated:
     st.warning("Please log in first")
